@@ -281,3 +281,26 @@ PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 - Definir e implementar a integração segura entre GFacilERP e FacilERP.
 - Corrigir vulnerabilidades de dependências com upgrade controlado.
 - Disponibilizar cargo no PATH e validar o build Tauri/instalador Windows.
+
+DIRETRIZ DE EVOLUÇÃO E INTEGRAÇÃO
+---------------------------------
+- O FacilERP e o GFacilERP devem ser fáceis de atualizar, com versões
+  identificadas, mudanças registradas, migrations controladas e builds
+  reproduzíveis.
+- Novas funcionalidades devem ser adicionadas por módulos e contratos
+  estáveis, evitando acoplamento direto entre telas, bancos e aplicativos.
+- A integração futura com outros sistemas deverá usar APIs versionadas,
+  Edge Functions, webhooks ou filas, conforme o caso, sem expor credenciais
+  ou permitir acesso direto de terceiros ao banco.
+- Integrações devem possuir autenticação forte, autorização por escopo,
+  rate limit, logs, idempotência, tratamento de falhas e documentação.
+- O aplicativo Windows deve permitir atualização controlada sem apagar dados
+  locais, preferências ou configurações do usuário.
+- Mudanças de banco devem usar migrations versionadas, backup prévio e
+  compatibilidade progressiva para evitar indisponibilidade.
+- Cada integração externa deve ser isolada por adaptadores ou serviços
+  próprios, facilitando troca de fornecedor e manutenção.
+- Versões incompatíveis devem ser anunciadas e mantidas com estratégia de
+  migração; não alterar contratos ativos silenciosamente.
+- Os READMEs e arquivos de status devem acompanhar decisões, endpoints,
+  variáveis de ambiente, migrations e passos de atualização.
