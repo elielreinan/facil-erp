@@ -67,7 +67,7 @@ export function ErpShell({ children, eyebrow, title }: {
       <div className="pl-56 sm:pl-64">
         <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8">
           <div><p className="text-xs font-semibold uppercase tracking-widest text-blue-700">{eyebrow}</p><h1 className="mt-1 text-xl font-bold">{title}</h1></div>
-          <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">Modo demonstração</span><div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">AD</div></div>
+          <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">Ambiente corporativo</span><div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">AD</div></div>
         </header>
         <div className="p-5 sm:p-8">{children}</div>
       </div>

@@ -9,6 +9,7 @@ OBJETIVOS
 - Controlar o patrimônio e os ativos corporativos de TI.
 - Restringir o acesso ao sistema a usuários autenticados.
 - Usar Supabase como banco PostgreSQL com UUID, chaves estrangeiras e RLS.
+- Operar a versão 0.1.5 sem dados fictícios, com CRUD e relatórios persistidos.
 
 CONCLUÍDOS
 ----------
@@ -107,6 +108,19 @@ CONCLUÍDOS
   branch main, sem credenciais ou dados sensíveis.
 - Reforçado o .gitignore para bloquear arquivos .env.* e manter somente o
   .env.example versionado como modelo de configuração.
+- Iniciada a versão 0.1.5: removido o acesso em modo demonstração da tela de
+  login e atualizado o nome do produto para FacilERP.
+- Atualizada a versão do pacote e da tela de configurações para 0.1.5.
+- Criado cliente Supabase compartilhado em lib/supabase.ts.
+- Preferências da tela de configurações agora são persistidas no armazenamento
+  local do computador.
+- Produtos e insumos passaram a consultar o Supabase e já possuem CRUD real
+  demonstrativo de produção: listar, criar, editar e excluir com confirmação.
+- Criada a tabela orcamento_documentos para metadados de anexos de orçamento,
+  com limite de 10 MB e RLS.
+- Adicionadas policies de escrita autenticada para os módulos operacionais,
+  como etapa inicial do CRUD real.
+- Build 0.1.5 validado com sucesso nas 15 rotas.
 - Corrigida nova quebra visual causada por artefatos incompatíveis no cache
   incremental do Next após troca/configuração do ambiente Supabase; o servidor
   dev foi encerrado, .next foi limpo e uma única instância foi reiniciada.
@@ -133,6 +147,11 @@ PENDENTES
 - Implementar upload privado de XML/PDF de NF no Supabase Storage.
 - Criar tabela de documentos de orçamento e bucket privado no Supabase Storage,
   com políticas de leitura, inclusão, alteração e exclusão por autorização.
+- Migrar Fornecedores, Suprimentos, Notas fiscais, Orçamentos, Patrimônio e
+  Relatórios dos dados fictícios para consultas e mutações Supabase.
+- Implementar Storage privado para anexos de NF e documentos de orçamento.
+- Implementar geração real de relatórios, visualização, armazenamento e
+  compartilhamento com dados persistidos.
 - Criar triggers ou funções server-side para gravar auditoria a cada alteração.
 - Adicionar permissões de escrita por setor, caso usuários precisem inserir,
   alterar ou excluir dados.
@@ -153,7 +172,7 @@ PENDENTES
 
 OBSERVAÇÕES
 -----------
-- O FacilERP e o futuro Gestor Facil ERP são aplicativos distintos.
+- O FACIL ERP e o futuro Gestor Facil ERP são aplicativos distintos.
 - Cada aplicativo terá seu próprio projeto Supabase.
 - O Gestor Facil ERP será responsável por criar, editar, aprovar, bloquear e
   gerenciar contas e permissões.

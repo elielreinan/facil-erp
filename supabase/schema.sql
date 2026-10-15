@@ -124,6 +124,17 @@ create table public.relatorios_salvos (
   criado_em timestamptz not null default timezone('utc', now())
 );
 
+create table public.orcamento_documentos (
+  id uuid primary key default gen_random_uuid(),
+  orcamento_id uuid not null references public.orcamentos (id) on delete cascade,
+  nome_arquivo text not null check (length(trim(nome_arquivo)) > 0),
+  caminho_storage text not null unique,
+  tipo_mime varchar(120) not null,
+  tamanho_bytes bigint not null check (tamanho_bytes > 0 and tamanho_bytes <= 10485760),
+  criado_por uuid not null references public.perfis (id) on delete restrict,
+  criado_em timestamptz not null default timezone('utc', now())
+);
+
 create index compras_historico_insumo_id_idx on public.compras_historico (insumo_id);
 create index compras_historico_data_compra_idx on public.compras_historico (data_compra);
 create index orcamento_itens_orcamento_id_idx on public.orcamento_itens (orcamento_id);
@@ -150,6 +161,7 @@ alter table public.notas_fiscais enable row level security;
 alter table public.auditoria_eventos enable row level security;
 alter table public.fornecedores enable row level security;
 alter table public.relatorios_salvos enable row level security;
+alter table public.orcamento_documentos enable row level security;
 
 create policy "Usuários autenticados podem ler perfis"
   on public.perfis for select to authenticated using (true);
@@ -188,3 +200,36 @@ create policy "Usuários autenticados podem ler fornecedores"
 create policy "Usuários autenticados podem ler relatórios salvos"
   on public.relatorios_salvos for select to authenticated
   using (criado_por = auth.uid());
+
+create policy "Usuários autenticados podem gerenciar insumos"
+  on public.insumos for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar fornecedores"
+  on public.fornecedores for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar compras"
+  on public.compras_historico for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar orçamentos"
+  on public.orcamentos for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar itens de orçamento"
+  on public.orcamento_itens for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar itens executados"
+  on public.executado_itens for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar notas fiscais"
+  on public.notas_fiscais for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar ativos"
+  on public.patrimonio_ativos for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem gerenciar relatórios"
+  on public.relatorios_salvos for all to authenticated using (true) with check (true);
+
+create policy "Usuários autenticados podem ler documentos de orçamento"
+  on public.orcamento_documentos for select to authenticated using (true);
+
+create policy "Usuários autenticados podem gerenciar documentos de orçamento"
+  on public.orcamento_documentos for all to authenticated using (true) with check (true);

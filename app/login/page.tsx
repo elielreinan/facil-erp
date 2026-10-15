@@ -1,21 +1,8 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-
-function createSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'As variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY são obrigatórias.',
-    );
-  }
-
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
-}
+import { getSupabaseClient } from '../../lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,14 +12,11 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       return;
     }
 
-    const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    const supabase = getSupabaseClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         router.replace('/dashboard');
@@ -46,7 +30,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createSupabaseClient();
+      const supabase = getSupabaseClient();
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -67,16 +51,12 @@ export default function LoginPage() {
     }
   }
 
-  function handleDemoLogin() {
-    router.replace('/dashboard');
-  }
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <section className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-700">
-            PROJ PARA FACILITAS
+            FACIL ERP
           </p>
           <h1 className="mt-3 text-3xl font-bold text-slate-900">Acesse sua conta</h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -133,15 +113,8 @@ export default function LoginPage() {
             {isSubmitting ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <button
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50"
-            onClick={handleDemoLogin}
-            type="button"
-          >
-            Explorar em modo demonstração
-          </button>
           <p className="text-center text-sm text-slate-500">
-            Acesso administrado pelo sistema corporativo de TI.
+            Acesso restrito a usuários autorizados.
           </p>
         </form>
       </section>
