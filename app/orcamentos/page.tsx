@@ -1,8 +1,9 @@
 'use client';
 
-import { FormEvent, Fragment, useMemo, useState } from 'react';
+import { FormEvent, Fragment, useEffect, useMemo, useState } from 'react';
 import { ErpShell } from '../../components/erp-shell';
 import { SearchFilters } from '../../components/search-filters';
+import { getCurrentProfile } from '../../lib/current-profile';
 import { isSafeText } from '../../lib/validation';
 
 type BudgetDocument = {
@@ -12,6 +13,7 @@ type BudgetDocument = {
 };
 
 type Budget = {
+  id: string;
   name: string;
   center: string;
   status: string;
@@ -23,9 +25,8 @@ type Budget = {
   documents: BudgetDocument[];
 };
 
-const budgets: Budget[] = [];
-
 export default function OrcamentosPage() {
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -33,6 +34,18 @@ export default function OrcamentosPage() {
   const [attachedDocuments, setAttachedDocuments] = useState<Record<string, BudgetDocument[]>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [formError, setFormError] = useState('');
+  const [loading, setLoading] = useState(true);
+  async function loadBudgets() {
+    try {
+      const { supabase, profile } = await getCurrentProfile();
+      if (!profile) { window.location.replace('/login'); return; }
+      const { data, error } = await supabase.from('orcamentos').select('id,nome_projeto,status,valor_previsto_total,criado_em').order('criado_em', { ascending: false });
+      if (error) throw error;
+      setBudgets((data ?? []).map((budget) => ({ id: budget.id, name: budget.nome_projeto, center: 'Não informado', status: budget.status, planned: budget.valor_previsto_total, realized: 0, manager: 'Não informado', updatedAt: new Date(budget.criado_em).toLocaleDateString('pt-BR'), items: 0, documents: [] })));
+    } catch (caughtError) { console.error('Falha ao carregar orçamentos:', caughtError); setFormError('Não foi possível carregar os orçamentos.'); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { void loadBudgets(); }, []);
   const filteredBudgets = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     return budgets.filter((budget) => {
@@ -41,7 +54,7 @@ export default function OrcamentosPage() {
     });
   }, [search, statusFilter]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const projectName = String(form.get('projectName') ?? '');
@@ -55,10 +68,13 @@ export default function OrcamentosPage() {
     }
     if (!window.confirm(`Confirmar criação do orçamento "${projectName.trim()}"?`)) return;
 
-    setFormError('');
-    setSuccessMessage(`Orçamento "${projectName.trim()}" criado em modo demonstração.`);
-    setIsFormOpen(false);
-    event.currentTarget.reset();
+    try {
+      const { supabase, profile } = await getCurrentProfile();
+      if (!profile) { window.location.replace('/login'); return; }
+      const { error } = await supabase.from('orcamentos').insert({ nome_projeto: projectName.trim(), valor_previsto_total: plannedValue, criado_por: profile.id });
+      if (error) throw error;
+      setFormError(''); setSuccessMessage(`Orçamento "${projectName.trim()}" criado com sucesso.`); setIsFormOpen(false); event.currentTarget.reset(); await loadBudgets();
+    } catch (caughtError) { console.error('Falha ao criar orçamento:', caughtError); setFormError('Não foi possível salvar o orçamento.'); }
   }
 
   function handleDocumentChange(event: FormEvent<HTMLInputElement>, budgetName: string) {
@@ -78,7 +94,7 @@ export default function OrcamentosPage() {
     }
     const documentData = { name: file.name, type: extension === '.pdf' ? 'PDF' : 'Documento', size: `${Math.ceil(file.size / 1024)} KB` };
     setAttachedDocuments((current) => ({ ...current, [budgetName]: [...(current[budgetName] ?? []), documentData] }));
-    setSuccessMessage(`Documento "${file.name}" anexado em modo demonstração.`);
+    setSuccessMessage(`Documento "${file.name}" validado. O upload persistente depende do Storage privado.`);
     input.value = '';
   }
 
@@ -182,7 +198,8 @@ export default function OrcamentosPage() {
               })}
             </tbody>
           </table>
-          {filteredBudgets.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">Nenhum orçamento cadastrado.</p>}
+          {loading && <p className="px-4 py-8 text-center text-sm text-slate-500">Carregando orçamentos...</p>}
+          {!loading && filteredBudgets.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">Nenhum orçamento cadastrado.</p>}
         </div>
         {isFormOpen && (
           <form className="mt-5 grid gap-4 rounded-lg border border-blue-100 bg-blue-50 p-4 sm:grid-cols-2" onSubmit={handleSubmit}>

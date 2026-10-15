@@ -55,7 +55,8 @@ create table public.orcamentos (
     check (status in ('rascunho', 'em_aprovacao', 'aprovado', 'encerrado', 'cancelado')),
   criado_em timestamptz not null default timezone('utc', now()),
   centro_custo_id uuid references public.centros_custo (id) on delete restrict,
-  criado_por uuid not null references public.perfis (id) on delete restrict
+  criado_por uuid not null references public.perfis (id) on delete restrict,
+  valor_previsto_total numeric(14, 2) not null default 0 check (valor_previsto_total >= 0)
 );
 
 create table public.orcamento_itens (
@@ -180,8 +181,26 @@ grant select, insert, update, delete on
   public.orcamento_documentos
 to authenticated;
 
-create policy "Usuários autenticados podem ler perfis"
-  on public.perfis for select to authenticated using (true);
+create or replace function public.current_profile_sector()
+returns text language sql stable security definer set search_path = public
+as $$ select setor from public.perfis where id = auth.uid(); $$;
+
+create or replace function public.current_profile_level()
+returns varchar language sql stable security definer set search_path = public
+as $$ select nivel from public.perfis where id = auth.uid(); $$;
+
+create or replace function public.can_manage(required_sector text)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.perfis
+    where id = auth.uid()
+      and (nivel = 'NV3' or setor = 'admin' or setor = required_sector)
+  );
+$$;
+
+create policy "Usuários autenticados podem ler o próprio perfil"
+  on public.perfis for select to authenticated using (id = auth.uid());
 
 create policy "Usuários autenticados podem ler insumos"
   on public.insumos for select to authenticated using (true);
@@ -218,35 +237,54 @@ create policy "Usuários autenticados podem ler relatórios salvos"
   on public.relatorios_salvos for select to authenticated
   using (criado_por = auth.uid());
 
-create policy "Usuários autenticados podem gerenciar insumos"
-  on public.insumos for all to authenticated using (true) with check (true);
+create policy "Suprimentos gerenciam insumos"
+  on public.insumos for all to authenticated
+  using (public.can_manage('suprimentos')) with check (public.can_manage('suprimentos'));
 
-create policy "Usuários autenticados podem gerenciar fornecedores"
-  on public.fornecedores for all to authenticated using (true) with check (true);
+create policy "Suprimentos gerenciam fornecedores"
+  on public.fornecedores for all to authenticated
+  using (public.can_manage('suprimentos')) with check (public.can_manage('suprimentos'));
 
-create policy "Usuários autenticados podem gerenciar compras"
-  on public.compras_historico for all to authenticated using (true) with check (true);
+create policy "Suprimentos gerenciam compras"
+  on public.compras_historico for all to authenticated
+  using (public.can_manage('suprimentos')) with check (public.can_manage('suprimentos') and criado_por = auth.uid());
 
-create policy "Usuários autenticados podem gerenciar orçamentos"
-  on public.orcamentos for all to authenticated using (true) with check (true);
+create policy "Orçamentos gerenciam orçamentos"
+  on public.orcamentos for all to authenticated
+  using (public.can_manage('orcamentos')) with check (public.can_manage('orcamentos') and criado_por = auth.uid());
 
-create policy "Usuários autenticados podem gerenciar itens de orçamento"
-  on public.orcamento_itens for all to authenticated using (true) with check (true);
+create policy "Orçamentos gerenciam itens previstos"
+  on public.orcamento_itens for all to authenticated
+  using (public.can_manage('orcamentos')) with check (public.can_manage('orcamentos'));
 
-create policy "Usuários autenticados podem gerenciar itens executados"
-  on public.executado_itens for all to authenticated using (true) with check (true);
+create policy "Orçamentos gerenciam itens executados"
+  on public.executado_itens for all to authenticated
+  using (public.can_manage('orcamentos')) with check (public.can_manage('orcamentos'));
 
-create policy "Usuários autenticados podem gerenciar notas fiscais"
-  on public.notas_fiscais for all to authenticated using (true) with check (true);
+create policy "Suprimentos gerenciam notas fiscais"
+  on public.notas_fiscais for all to authenticated
+  using (public.can_manage('suprimentos')) with check (public.can_manage('suprimentos') and criado_por = auth.uid());
 
-create policy "Usuários autenticados podem gerenciar ativos"
-  on public.patrimonio_ativos for all to authenticated using (true) with check (true);
+create policy "TI gerencia ativos"
+  on public.patrimonio_ativos for all to authenticated
+  using (public.can_manage('ti')) with check (public.can_manage('ti') and criado_por = auth.uid());
 
-create policy "Usuários autenticados podem gerenciar relatórios"
-  on public.relatorios_salvos for all to authenticated using (true) with check (true);
+create policy "Usuários gerenciam próprios relatórios"
+  on public.relatorios_salvos for insert to authenticated
+  with check (criado_por = auth.uid());
+
+create policy "Usuários alteram próprios relatórios"
+  on public.relatorios_salvos for update to authenticated
+  using (criado_por = auth.uid()) with check (criado_por = auth.uid());
+
+create policy "Usuários excluem próprios relatórios"
+  on public.relatorios_salvos for delete to authenticated
+  using (criado_por = auth.uid());
 
 create policy "Usuários autenticados podem ler documentos de orçamento"
   on public.orcamento_documentos for select to authenticated using (true);
 
-create policy "Usuários autenticados podem gerenciar documentos de orçamento"
-  on public.orcamento_documentos for all to authenticated using (true) with check (true);
+create policy "Orçamentos gerenciam documentos de orçamento"
+  on public.orcamento_documentos for all to authenticated
+  using (public.can_manage('orcamentos'))
+  with check (public.can_manage('orcamentos') and criado_por = auth.uid());

@@ -194,6 +194,9 @@ PENDENTES
   aprovação, bloqueio, redefinição de senha, delegação de setor e auditoria.
 - MFA obrigatório, rate limit, headers de segurança e revogação de sessões do
   GFacilERP permanecem pendentes antes de produção.
+- Criado GFacilERP/STATUS_GFACILERP.txt com o histórico de mudanças, objetivos,
+  pendências, regras de segurança e explicação da importância do GFacilERP para
+  o FacilERP.
 
 OBSERVAÇÕES
 -----------
@@ -238,3 +241,24 @@ OBSERVAÇÕES
 - Toda operação de criação, alteração ou exclusão deverá exigir confirmação
   secundária imediatamente antes da conclusão/persistência; abrir ou fechar
   formulários não exige confirmação.
+
+ATUALIZAÇÃO DE IMPLEMENTAÇÃO
+-----------------------------
+- Fornecedores, Suprimentos, Notas fiscais e Patrimônio passaram a consultar
+  dados reais do Supabase, com formulários de criação, validação, confirmação
+  e mensagens explícitas de erro.
+- Relatórios passaram a consultar contagens reais das tabelas operacionais,
+  sem apresentar geração demonstrativa.
+- Criado o helper lib/current-profile.ts para validar sessão e perfil antes
+  das operações dos módulos.
+- Adicionadas funções de autorização por setor e nível ao schema, reduzindo
+  o uso de policies de escrita abertas.
+- Permanecem pendentes a edição e exclusão dos novos módulos, a persistência
+  completa de Orçamentos e o Storage privado para anexos.
+- O schema atualizado precisa ser aplicado no SQL Editor em banco novo ou
+  convertido em migration controlada antes de atualizar um banco já utilizado;
+  a coluna valor_previsto_total e as policies de autorização não são aplicadas
+  automaticamente pelo frontend.
+- npm audit encontrou vulnerabilidades transitivas em Next.js 14, PostCSS,
+  Tailwind e braces; a correção automática exige upgrades major e deve ser
+  planejada com nova validação de compatibilidade.
