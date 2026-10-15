@@ -103,6 +103,10 @@ CONCLUÍDOS
 - Build final do frontend validado nas 15 rotas após as correções.
 - Servidor de desenvolvimento reiniciado com cache .next limpo e formulário
   de lançamento de NF validado visualmente.
+- Projeto publicado no GitHub em https://github.com/elielreinan/facil-erp,
+  branch main, sem credenciais ou dados sensíveis.
+- Reforçado o .gitignore para bloquear arquivos .env.* e manter somente o
+  .env.example versionado como modelo de configuração.
 
 PENDENTES
 ---------
