@@ -185,11 +185,34 @@ PENDENTES
 - Executar npm run lint e testes automatizados.
 - Configurar ESLint antes de executar npm run lint de forma não interativa;
   no estado atual o Next abre o assistente de configuração.
+- GFacilERP criado em diretório independente, com package-lock, banco Supabase
+  separado, login administrativo sem modo demonstração e rotas /usuarios,
+  /auditoria e /configuracoes.
+- Build de produção do GFacilERP validado com oito rotas estáticas.
+- Rodapé do GFacilERP inclui "Codado por 2E" com link para https://instagram.com.
+- GFacilERP ainda precisa de Edge Functions/API server-side para criação,
+  aprovação, bloqueio, redefinição de senha, delegação de setor e auditoria.
+- MFA obrigatório, rate limit, headers de segurança e revogação de sessões do
+  GFacilERP permanecem pendentes antes de produção.
 
 OBSERVAÇÕES
 -----------
 - O FACIL ERP e o futuro Gestor Facil ERP são aplicativos distintos.
 - Cada aplicativo terá seu próprio projeto Supabase.
+- O Gestor Facil ERP será mantido como um segundo aplicativo, inicialmente
+  dentro da pasta de trabalho e separado em diretório próprio quando essa
+  etapa começar. Não compartilhará banco, credenciais, sessão ou código
+  administrativo com o FacilERP.
+- Escopo do Gestor Facil ERP: CRUD de usuários do FacilERP, aprovação de
+  novos usuários, redefinição de senha por fluxo administrativo seguro e
+  delegação de setor/permissões.
+- Operações administrativas não deverão usar service role no navegador. Devem
+  passar por backend seguro, Edge Functions ou API privada, com MFA para
+  administradores, auditoria, rate limit, validação rigorosa, proteção contra
+  enumeração, expiração de sessões e segredos somente server-side.
+- O Gestor deverá ser preparado contra injeção, IDOR, CSRF, XSS, SSRF, brute
+  force, abuso de recuperação de senha, vazamento de PII, exposição de tokens,
+  uploads inseguros, CORS indevido e dependências vulneráveis.
 - O Gestor Facil ERP será responsável por criar, editar, aprovar, bloquear e
   gerenciar contas e permissões.
 - O FacilERP será consumidor dessas informações e não terá telas de gestão de
