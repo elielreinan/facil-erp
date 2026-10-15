@@ -11,11 +11,19 @@ type BudgetDocument = {
   size: string;
 };
 
-const budgets = [
-  { name: 'Residencial Torre Norte', center: 'Obras - Torre Norte', status: 'Em execução', planned: 500000, realized: 342180, manager: 'Mariana Costa', updatedAt: '14/10/2026', items: 28, documents: [{ name: 'planilha-medicao-outubro.xlsx', type: 'Planilha', size: '248 KB' }, { name: 'memorial-descritivo.pdf', type: 'PDF', size: '1,8 MB' }] },
-  { name: 'Reforma Unidade Centro', center: 'Manutenção', status: 'Em execução', planned: 200000, realized: 84200, manager: 'Rafael Lima', updatedAt: '13/10/2026', items: 16, documents: [{ name: 'orcamento-fornecedor.xlsx', type: 'Planilha', size: '96 KB' }] },
-  { name: 'Expansão Elétrica 2026', center: 'Obras - Torre Norte', status: 'Atenção', planned: 140000, realized: 128520, manager: 'Camila Nunes', updatedAt: '12/10/2026', items: 21, documents: [] },
-];
+type Budget = {
+  name: string;
+  center: string;
+  status: string;
+  planned: number;
+  realized: number;
+  manager: string;
+  updatedAt: string;
+  items: number;
+  documents: BudgetDocument[];
+};
+
+const budgets: Budget[] = [];
 
 export default function OrcamentosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -85,7 +93,7 @@ export default function OrcamentosPage() {
           {isFormOpen ? <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => setIsFormOpen(false)} type="button">Fechar formulário</button> : <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={() => { setIsFormOpen(true); setSuccessMessage(''); }} type="button">Novo orçamento</button>}
         </div>
         <SearchFilters
-          filters={[{ label: 'Status', value: statusFilter, options: ['Em execução', 'Atenção', 'Concluído'], onChange: setStatusFilter }]}
+          filters={[{ label: 'Status', value: statusFilter, options: [], onChange: setStatusFilter }]}
           onSearchChange={setSearch}
           placeholder="Buscar por projeto ou centro de custo"
           search={search}
@@ -174,7 +182,7 @@ export default function OrcamentosPage() {
               })}
             </tbody>
           </table>
-          {filteredBudgets.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">Nenhum orçamento encontrado para os filtros informados.</p>}
+          {filteredBudgets.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">Nenhum orçamento cadastrado.</p>}
         </div>
         {isFormOpen && (
           <form className="mt-5 grid gap-4 rounded-lg border border-blue-100 bg-blue-50 p-4 sm:grid-cols-2" onSubmit={handleSubmit}>

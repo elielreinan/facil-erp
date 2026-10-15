@@ -163,6 +163,23 @@ alter table public.fornecedores enable row level security;
 alter table public.relatorios_salvos enable row level security;
 alter table public.orcamento_documentos enable row level security;
 
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on
+  public.perfis,
+  public.centros_custo,
+  public.insumos,
+  public.fornecedores,
+  public.compras_historico,
+  public.orcamentos,
+  public.orcamento_itens,
+  public.executado_itens,
+  public.patrimonio_ativos,
+  public.notas_fiscais,
+  public.auditoria_eventos,
+  public.relatorios_salvos,
+  public.orcamento_documentos
+to authenticated;
+
 create policy "Usuários autenticados podem ler perfis"
   on public.perfis for select to authenticated using (true);
 

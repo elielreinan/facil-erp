@@ -128,6 +128,15 @@ CONCLUÍDOS
 - Validada a rota /suprimentos com estilos e bundles carregando normalmente.
 - Confirmado que não existe Service Worker registrado pelo projeto; registros e
   caches antigos do navegador foram removidos durante a validação.
+- Removidos os dados demonstrativos restantes de Suprimentos, Fornecedores,
+  Orçamentos, Notas fiscais, Patrimônio, Auditoria e Configurações; essas áreas
+  agora exibem zero registros até existirem dados reais no banco.
+- Criado cleanup de Service Worker no layout para remover registros antigos do
+  navegador que causavam erros FetchEvent/sw.js; o projeto não contém sw.js.
+- Adicionada guarda de sessão no shell para redirecionar usuários não
+  autenticados antes de consultar a Data API.
+- Corrigido o carregamento vazio de Produtos para não usar fallback fictício;
+  a tela consulta somente a tabela public.insumos.
 - Corrigida nova quebra visual causada por artefatos incompatíveis no cache
   incremental do Next após troca/configuração do ambiente Supabase; o servidor
   dev foi encerrado, .next foi limpo e uma única instância foi reiniciada.

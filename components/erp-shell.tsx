@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { getSupabaseClient } from '../lib/supabase';
 
 const modules = [
   ['boxes', 'Suprimentos', '/suprimentos'],
@@ -36,6 +39,20 @@ export function ErpShell({ children, eyebrow, title }: {
   title: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+    getSupabaseClient().auth.getUser().then(({ data, error }) => {
+      if (active && (error || !data.user)) router.replace('/login');
+    }).catch((error: unknown) => {
+      console.error('Falha ao validar sessão:', error);
+      if (active) router.replace('/login');
+    });
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   return (
     <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
