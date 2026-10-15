@@ -262,3 +262,22 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - npm audit encontrou vulnerabilidades transitivas em Next.js 14, PostCSS,
   Tailwind e braces; a correção automática exige upgrades major e deve ser
   planejada com nova validação de compatibilidade.
+
+PENDÊNCIAS CONSOLIDADAS - 15/10/2026
+-------------------------------------
+- Aplicar o schema atualizado no projeto Supabase do FacilERP.
+- Criar Edge Functions/API privada do GFacilERP para criação, aprovação,
+  bloqueio, desbloqueio, redefinição de senha, delegação de setor e auditoria.
+- Criar um projeto Supabase separado exclusivamente para o GFacilERP.
+- Executar GFacilERP/supabase/schema.sql nesse novo projeto.
+- Configurar o .env.local do GFacilERP somente com URL e chave pública anon.
+- Criar o primeiro administrador do GFacilERP e seu registro em
+  public.administradores.
+- Implementar MFA, rate limit, revogação de sessões e headers de segurança.
+- Finalizar edição e exclusão nos módulos operacionais do FacilERP.
+- Implementar itens previstos e realizados dos orçamentos.
+- Configurar Storage privado para anexos e políticas de acesso.
+- Criar auditoria automática para mutações do FacilERP.
+- Definir e implementar a integração segura entre GFacilERP e FacilERP.
+- Corrigir vulnerabilidades de dependências com upgrade controlado.
+- Disponibilizar cargo no PATH e validar o build Tauri/instalador Windows.
