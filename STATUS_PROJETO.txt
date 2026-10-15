@@ -121,6 +121,13 @@ CONCLUÍDOS
 - Adicionadas policies de escrita autenticada para os módulos operacionais,
   como etapa inicial do CRUD real.
 - Build 0.1.5 validado com sucesso nas 15 rotas.
+- Corrigido tsconfig.json para usar target es2017, eliminando incompatibilidade
+  com iteração e geração dos bundles atuais.
+- Corrigidos 404 de webpack/runtime e módulos ausentes após limpeza do cache
+  .next e reinicialização de uma única instância do Next.
+- Validada a rota /suprimentos com estilos e bundles carregando normalmente.
+- Confirmado que não existe Service Worker registrado pelo projeto; registros e
+  caches antigos do navegador foram removidos durante a validação.
 - Corrigida nova quebra visual causada por artefatos incompatíveis no cache
   incremental do Next após troca/configuração do ambiente Supabase; o servidor
   dev foi encerrado, .next foi limpo e uma única instância foi reiniciada.
