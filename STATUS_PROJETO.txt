@@ -1,0 +1,173 @@
+PROJ PARA FACILITAS
+STATUS DO PROJETO
+==================
+
+OBJETIVOS
+---------
+- Unificar o histórico de compras de insumos.
+- Comparar valores e quantidades previstas com os valores e quantidades realizados.
+- Controlar o patrimônio e os ativos corporativos de TI.
+- Restringir o acesso ao sistema a usuários autenticados.
+- Usar Supabase como banco PostgreSQL com UUID, chaves estrangeiras e RLS.
+
+CONCLUÍDOS
+----------
+- Criado o script SQL completo em supabase/schema.sql.
+- Criada a tabela public.perfis vinculada a auth.users.
+- Criadas as tabelas de insumos, compras, orçamentos, itens previstos,
+  itens executados e patrimônio.
+- Adicionadas chaves primárias UUID, chaves estrangeiras, restrições,
+  índices e valores padrão.
+- Habilitado Row Level Security (RLS) em todas as tabelas públicas.
+- Criadas políticas básicas de leitura para usuários autenticados.
+- Configurado o app desktop com Next.js, TypeScript, Tailwind CSS e Tauri.
+- Configurada a geração de saída estática para empacotamento Windows.
+- Adicionada proteção de sessão no cliente para o modo desktop estático.
+- Bloqueado o acesso ao dashboard por usuários não autenticados.
+- Configurado o redirecionamento de usuários autenticados de /login para /dashboard.
+- Criada a tela de login em app/login/page.tsx.
+- Implementado login por e-mail e senha com signInWithPassword.
+- Adicionado estado de carregamento e mensagens de erro no formulário.
+- Impedido o envio repetido do formulário enquanto o login está em andamento.
+- Criado o projeto Tauri em src-tauri.
+- Configurado o instalador Windows NSIS no Tauri.
+- Criados package.json, tsconfig.json, Tailwind, PostCSS e configuração do Next.
+- Build estático do Next validado com sucesso.
+- Adicionado botão de navegação em modo demonstração para testar as telas
+  sem configurar o Supabase.
+- Criado shell visual de ERP com janela lateral de módulos e perfil NV3.
+- Mantido o nível NV1/NV2/NV3 no perfil apenas como referência de autorização
+  fornecida pelo sistema corporativo de TI.
+- Adicionadas entidades de centro de custo, notas fiscais e auditoria.
+- Adicionada visão demonstrativa de entradas com NF, centro de custo e status.
+- Criadas rotas independentes para Suprimentos, Notas fiscais, Orçamentos,
+  Patrimônio e Auditoria.
+- Adicionadas telas independentes de Produtos, Fornecedores e Relatórios.
+- O dashboard deixou de ser uma visão geral e passou a redirecionar para
+  Suprimentos; cada opção do menu possui sua própria rota.
+- Criado o componente compartilhado components/erp-shell.tsx para manter a
+  barra lateral fixa, cabeçalho e perfil consistentes entre os módulos.
+- Adicionada navegação lateral fixa no padrão ERP, com módulos de Suprimentos,
+  Produtos, Fornecedores, Notas fiscais, Orçamentos, Relatórios, Patrimônio,
+  Auditoria e Configurações.
+- Criados ícones SVG profissionais para o menu, substituindo símbolos e emojis.
+- Adicionadas ao modelo entidades de fornecedores, produtos com estoque mínimo
+  e relatórios salvos.
+- Adicionado componente components/search-filters.tsx com busca textual e
+  filtros por categoria, status, centro de custo e período.
+- Adicionadas buscas e filtros funcionais nas telas de Suprimentos, Produtos,
+  Fornecedores e Relatórios.
+- Tornado funcional o botão "Novo orçamento", com formulário demonstrativo
+  validado para projeto, centro de custo e valor previsto.
+- Adicionados validadores de CNPJ, texto, código e pesquisa, além de máscaras
+  de CNPJ e telefone nos cadastros demonstrativos.
+- Adicionados limites de tamanho, padrões de entrada e mensagens de validação
+  nos formulários de produtos e fornecedores.
+- Adicionada confirmação secundária antes de concluir a criação demonstrativa
+  de produtos, fornecedores e orçamentos.
+- Adicionadas validações de e-mail, código de produto, CNPJ e telefone nos
+  formulários demonstrativos.
+- Adicionada área de Configurações com preferências e versão do app.
+- Configurado terminal visual de diagnóstico para exibir somente erros e avisos
+  técnicos do servidor, sem eventos comuns de usuário.
+- Adicionados recursos de acessibilidade: navegação por teclado, foco visível,
+  `aria-current`, labels de formulário e regiões semânticas.
+- Corrigido o escaneamento do Tailwind para incluir a pasta components.
+- Corrigidas falhas recorrentes do frontend causadas por cache incremental
+  corrompido do Next.js, limpando .next e reiniciando o servidor.
+- Validada a rota de Fornecedores após a correção, com busca, filtro e tabela.
+- Rust/Rustup instalado no Windows.
+- Visual Studio Build Tools 2022 instalado com workload de ferramentas C++ para
+  fornecer o linker MSVC necessário ao Tauri.
+- Build de produção do Next validado novamente após as últimas alterações.
+- Corrigida a inconsistência do frontend causada pela execução simultânea de
+  next dev e next build no mesmo cache .next; o cache foi removido e o build
+  isolado foi validado novamente.
+- Validada a rota de Configurações no servidor de desenvolvimento após a
+  limpeza do cache, com barra lateral, Tailwind, versão e terminal de erros.
+- Validado o fluxo "Novo orçamento": o formulário abre, a validação funciona e
+  a confirmação secundária aparece imediatamente antes da conclusão; o
+  cancelamento impede a criação.
+- Substituída a visualização de orçamentos em cards por uma tabela compacta,
+  escalável para muitos registros, com busca por projeto/centro de custo,
+  filtro por status e progresso previsto x realizado por linha.
+- Adicionada coluna "Detalhes" na lista de orçamentos, com expansão inline
+  para consultar responsável, última atualização e quantidade de insumos sem
+  poluir a tabela com novos cards ou navegar para outra tela.
+- Adicionada área demonstrativa de documentos dentro dos detalhes do orçamento,
+  com suporte visual a planilhas, PDF, DOC, XML e CSV, limite de 10 MB,
+  visualização demonstrativa e confirmação antes do anexo.
+- Concluído o pente-fino das ações principais do frontend: Nova entrada,
+  Lançar NF, Novo ativo, Gerar relatório, Salvar preferências e Exportar erros
+  agora possuem comportamento, validação e mensagens de retorno.
+- Build final do frontend validado nas 15 rotas após as correções.
+- Servidor de desenvolvimento reiniciado com cache .next limpo e formulário
+  de lançamento de NF validado visualmente.
+
+PENDENTES
+---------
+- Tornar todos os dados do ERP CRUD (criar, consultar, editar e excluir),
+  começando por orçamentos e documentos anexos e seguindo pelos demais
+  módulos, com persistência real no Supabase.
+- Integrar os formulários demonstrativos já existentes à persistência real e
+  adicionar ações de edição e exclusão nas tabelas de Produtos, Fornecedores,
+  Suprimentos, Notas fiscais e Patrimônio.
+- Criar o arquivo .env.local com:
+  NEXT_PUBLIC_SUPABASE_URL
+  NEXT_PUBLIC_SUPABASE_ANON_KEY
+- Executar supabase/schema.sql no SQL Editor do projeto Supabase.
+- Criar os usuários no Supabase Auth e seus registros correspondentes em public.perfis.
+- Executar npm run tauri:dev para validar a janela desktop.
+- Executar npm run tauri:build para gerar o instalador .exe.
+- Integrar a autenticação e o nível NV1/NV2/NV3 ao sistema corporativo de TI.
+- Implementar guards de NV1/NV2/NV3 no banco e nas ações da interface.
+- Implementar upload privado de XML/PDF de NF no Supabase Storage.
+- Criar tabela de documentos de orçamento e bucket privado no Supabase Storage,
+  com políticas de leitura, inclusão, alteração e exclusão por autorização.
+- Criar triggers ou funções server-side para gravar auditoria a cada alteração.
+- Adicionar permissões de escrita por setor, caso usuários precisem inserir,
+  alterar ou excluir dados.
+- Implementar persistência real nas operações de cadastro e edição de produtos
+  e fornecedores.
+- Implementar geração/exportação dos relatórios com filtros por período e centro
+  de custo.
+- Aplicar validação equivalente no backend/API antes de persistir qualquer
+  entrada e usar somente consultas parametrizadas ou Supabase SDK.
+- Configurar rate limit, headers de segurança, CSRF quando houver mutações web,
+  e políticas RLS específicas por setor antes de produção.
+- Integrar as preferências da área de Configurações ao armazenamento local.
+- Conectar o log visual aos eventos reais do aplicativo e permitir exportação.
+- Adicionar testes automatizados para autenticação e regras de acesso.
+- Executar npm run lint e testes automatizados.
+- Configurar ESLint antes de executar npm run lint de forma não interativa;
+  no estado atual o Next abre o assistente de configuração.
+
+OBSERVAÇÕES
+-----------
+- O FacilERP e o futuro Gestor Facil ERP são aplicativos distintos.
+- Cada aplicativo terá seu próprio projeto Supabase.
+- O Gestor Facil ERP será responsável por criar, editar, aprovar, bloquear e
+  gerenciar contas e permissões.
+- O FacilERP será consumidor dessas informações e não terá telas de gestão de
+  usuários.
+- Como os Supabase serão separados, a autenticação futura exigirá uma
+  integração entre os aplicativos, como API segura de identidade, sincronização
+  controlada de usuários ou um mecanismo de SSO. Não será correto presumir que
+  uma sessão de um projeto Supabase seja válida no outro.
+- O script SQL permite leitura para qualquer usuário autenticado, conforme
+  solicitado. Operações de escrita ainda não possuem policies.
+- O modo Tauri usa páginas estáticas; por isso a proteção de sessão ocorre no
+  cliente e as policies do Supabase continuam sendo a proteção dos dados.
+- O botão "Explorar em modo demonstração" é somente para prototipação local e
+  não valida credenciais nem deve ser usado como acesso de produção.
+- Gestão de usuários, cadastro, aprovação, CPF, credenciais e definição de
+  nível ficam fora do FacilERP, sob responsabilidade do sistema corporativo de TI.
+- O primeiro cargo check falhou porque o linker MSVC ainda não estava instalado;
+  o Build Tools foi instalado posteriormente. Executar cargo check novamente
+  em um terminal com o ambiente MSVC carregado.
+- Mensagens de falha de login não expõem se o e-mail ou a senha está incorreto.
+- As máscaras e validações atuais são uma primeira barreira de interface; não
+  substituem validação no backend, consultas parametrizadas, RLS e rate limit.
+- Toda operação de criação, alteração ou exclusão deverá exigir confirmação
+  secundária imediatamente antes da conclusão/persistência; abrir ou fechar
+  formulários não exige confirmação.
