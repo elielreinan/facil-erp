@@ -107,6 +107,11 @@ CONCLUÍDOS
   branch main, sem credenciais ou dados sensíveis.
 - Reforçado o .gitignore para bloquear arquivos .env.* e manter somente o
   .env.example versionado como modelo de configuração.
+- Corrigida nova quebra visual causada por artefatos incompatíveis no cache
+  incremental do Next após troca/configuração do ambiente Supabase; o servidor
+  dev foi encerrado, .next foi limpo e uma única instância foi reiniciada.
+- Validadas as rotas /login e /patrimonio após a correção, com Tailwind,
+  barra lateral e conteúdo carregando normalmente.
 
 PENDENTES
 ---------
