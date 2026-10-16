@@ -267,6 +267,9 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - Criado supabase/fix-permissions.sql para corrigir privilégios do papel
   authenticated quando a Data API retornar 403/42501 ao consultar insumos.
 - Removida a assinatura do rodapé do GFacilERP conforme solicitação.
+- Criado PENDENCIAS_PARA_OUTRA_IA.txt com atividades, prompts, ordem de
+  execução, critérios de sucesso e cuidados para continuidade por outro
+  usuário sem experiência de programação.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------

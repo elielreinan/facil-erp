@@ -1,0 +1,276 @@
+GUIA DE ATIVIDADES PENDENTES
+FACIL ERP + GFACILERP
+==========================
+
+OBJETIVO DESTE DOCUMENTO
+-------------------------
+Este guia foi feito para uma pessoa que nao programa. Ele lista o que ainda
+precisa ser feito e fornece instrucoes prontas para enviar a outra IA.
+
+Use uma atividade por vez. Depois de cada atividade, confira o resultado
+antes de iniciar a proxima.
+
+REGRAS IMPORTANTES
+------------------
+- Nunca envie para a IA o conteudo de .env.local.
+- Nunca envie service_role, sb_secret, senha do banco, JWT secret ou tokens.
+- Nunca execute npm audit fix --force sem pedir uma revisao antes.
+- Nunca apague .env.local, bancos, tabelas ou dados reais sem backup.
+- Nao misture os projetos: FacilERP e GFacilERP possuem bancos separados.
+- Nao inicie dois servidores Next na mesma porta.
+- Antes de uma mudanca grande, peca para a IA explicar o que sera alterado.
+- Sempre peca build e verificacao depois de qualquer alteracao.
+- Se a IA sugerir desativar RLS, pare e peca uma alternativa segura.
+
+COMO USAR COM A OUTRA IA
+-------------------------
+Copie o prompt da atividade escolhida e envie junto com:
+- O caminho da pasta correta.
+- O erro completo, se existir.
+- O resultado do comando de build.
+
+Nao envie arquivos de ambiente nem chaves.
+
+ORDEM RECOMENDADA
+-----------------
+1. Corrigir permissoes do Supabase do FacilERP.
+2. Validar login e leitura de produtos.
+3. Configurar e validar o Supabase do GFacilERP.
+4. Finalizar CRUD do FacilERP.
+5. Implementar Edge Functions do GFacilERP.
+6. Configurar anexos privados.
+7. Implementar auditoria e integracao.
+8. Validar Windows, dependencias e publicacao.
+
+ATIVIDADE 1 - CORRIGIR ERRO 403 DO FACILERP
+-------------------------------------------
+Objetivo:
+Corrigir o erro 403/42501 ao consultar public.insumos.
+
+Passos:
+1. Abrir o projeto Supabase do FacilERP.
+2. Abrir SQL Editor.
+3. Abrir localmente:
+   supabase/fix-permissions.sql
+4. Copiar o conteudo para o SQL Editor.
+5. Executar.
+6. Sair e entrar novamente no FacilERP.
+7. Abrir Produtos.
+
+Prompt para a outra IA:
+"No projeto FacilERP, investigue o erro 403/42501 permission denied for table
+insumos. Leia supabase/fix-permissions.sql e confirme se ele deve ser executado
+no SQL Editor. Nao desative RLS, nao use service_role no frontend e nao altere
+arquivos sem explicar. Depois indique como testar a rota Produtos."
+
+Sucesso:
+- Produtos abre sem erro 403.
+- A lista mostra somente registros existentes no banco.
+- Nenhum dado demonstrativo aparece.
+
+ATIVIDADE 2 - CONFIGURAR O GFACILERP NO SUPABASE
+------------------------------------------------
+Objetivo:
+Criar o projeto Supabase separado do FacilERP.
+
+Passos:
+1. Criar um novo projeto Supabase chamado g-facil-erp.
+2. Ativar Data API.
+3. Desativar exposicao automatica de novas tabelas.
+4. Ativar RLS automatico.
+5. Executar GFacilERP/supabase/schema.sql.
+6. Ativar login por e-mail.
+7. Criar o primeiro usuario em Authentication > Users.
+8. Copiar somente o UUID desse usuario.
+9. Executar no SQL Editor:
+
+insert into public.administradores (id, nome, ativo)
+values ('UUID_DO_USUARIO', 'Administrador principal', true);
+
+10. Criar GFacilERP/.env.local localmente com a URL e a chave publica.
+
+Prompt:
+"Configure o Supabase do GFacilERP usando GFacilERP/supabase/schema.sql.
+Verifique RLS, policies, grants e a tabela public.administradores. Nao use nem
+solicite service_role. Nao publique .env.local. Ao final, informe somente os
+testes seguros que devo executar."
+
+Sucesso:
+- Login administrativo funciona.
+- Usuario fora de administradores nao entra.
+- Usuario com ativo=false nao entra.
+- /usuarios carrega sem dados ficticios.
+
+ATIVIDADE 3 - VALIDAR ROTAS DO GFACILERP
+----------------------------------------
+Objetivo:
+Confirmar que o gestor administrativo esta funcionando.
+
+Prompt:
+"No GFacilERP, valide login, /usuarios, /auditoria e /configuracoes. Use uma
+unica instancia npm run dev, confira erros do navegador e rode npm run build.
+Nao altere credenciais nem crie dados ficticios. Se houver falha, corrija
+somente a causa e explique o arquivo modificado."
+
+Sucesso:
+- npm run build termina sem erro.
+- As tres rotas protegidas carregam.
+- A lista vazia informa que nao existem registros.
+- Nao existem erros de rede ou 500 no navegador.
+
+ATIVIDADE 4 - FINALIZAR CRUD DO FACILERP
+----------------------------------------
+Objetivo:
+Garantir criar, consultar, editar e excluir onde ainda faltar.
+
+Modulos:
+- Fornecedores.
+- Suprimentos.
+- Notas fiscais.
+- Patrimonio.
+- Orcamentos.
+- Itens previstos e realizados.
+- Relatorios salvos.
+
+Prompt:
+"No FacilERP, audite o CRUD do modulo [NOME DO MODULO]. Conecte somente ao
+Supabase real, sem arrays ficticios. Implemente listar, criar, editar e
+excluir quando o schema permitir. Exija confirmacao imediatamente antes de
+cada mutacao, trate erros explicitamente, respeite RLS e nao use service_role.
+Rode o build e liste testes manuais."
+
+Sucesso:
+- Registro criado aparece apos recarregar.
+- Edicao permanece apos recarregar.
+- Exclusao remove o registro real.
+- Erros de RLS aparecem de forma clara.
+- Nao ha fallback com dados inventados.
+
+ATIVIDADE 5 - IMPLEMENTAR EDGE FUNCTIONS DO GFACILERP
+------------------------------------------------------
+Objetivo:
+Executar operacoes Auth administrativas somente no servidor.
+
+Operacoes:
+- Criar usuario Auth.
+- Aprovar usuario.
+- Bloquear e desbloquear.
+- Redefinir senha.
+- Delegar setor.
+- Revogar sessoes.
+- Registrar auditoria.
+
+Prompt:
+"Implemente Edge Functions seguras para o GFacilERP. A service_role deve
+existir somente em segredo server-side. Valide a sessao do administrador,
+confira public.administradores, aplique autorizacao, rate limit, validacao de
+entrada, resposta generica contra enumeracao e auditoria. Nao coloque segredo
+em React, NEXT_PUBLIC_* ou git. Crie testes e documentacao de deploy."
+
+Importante:
+- Esta atividade exige mais conhecimento tecnico.
+- Nao aceitar uma implementacao que use service_role em page.tsx.
+- Nao aceitar endpoints sem autorizacao de administrador.
+
+ATIVIDADE 6 - CONFIGURAR STORAGE PRIVADO
+-----------------------------------------
+Objetivo:
+Armazenar XML, PDF e documentos sem torna-los publicos.
+
+Prompt:
+"Configure Storage privado no Supabase para notas fiscais e documentos de
+orcamentos. Crie policies por usuario/setor, limite de tamanho, validacao de
+MIME e extensao, nomes seguros e URLs assinadas com expiracao. Nao use bucket
+publico e nao exponha tokens. Atualize o schema e documente o deploy."
+
+Sucesso:
+- Arquivo nao abre sem autorizacao.
+- Upload invalido e recusado.
+- Arquivo maior que o limite e recusado.
+- URL assinada expira.
+
+ATIVIDADE 7 - AUDITORIA E PERMISSOES
+------------------------------------
+Objetivo:
+Registrar alteracoes e impedir acesso indevido.
+
+Prompt:
+"Revise RLS e auditoria do FacilERP e GFacilERP. Crie policies por setor e
+nivel sem usar using(true) ou with check(true) para escrita. Garanta que cada
+criacao, alteracao, exclusao, aprovacao e bloqueio gere auditoria. Teste
+usuario sem permissao, usuario de outro setor e administrador. Nao reduza a
+seguranca para fazer o teste passar."
+
+Sucesso:
+- Usuario de setor incorreto nao altera dados.
+- Usuario comum nao executa operacoes administrativas.
+- Toda mutacao possui autor, data, acao e entidade.
+
+ATIVIDADE 8 - INTEGRACAO ENTRE SISTEMAS
+---------------------------------------
+Objetivo:
+Preparar conexao futura sem compartilhar bancos ou sessoes diretamente.
+
+Prompt:
+"Projete a integracao entre GFacilERP, FacilERP e sistemas externos usando
+API versionada ou Edge Functions. Defina autenticacao, escopos, idempotencia,
+rate limit, logs, erros, webhooks e versionamento. Nao permita acesso direto
+de terceiros ao PostgreSQL e nao considere a sessao de um Supabase valida no
+outro sem verificacao."
+
+Entregavel:
+- Documento com contrato da API.
+- Versao dos endpoints.
+- Campos de entrada e saida.
+- Regras de autorizacao.
+- Estrategia de falha e retry.
+
+ATIVIDADE 9 - ATUALIZACAO FACIL E WINDOWS
+------------------------------------------
+Objetivo:
+Manter o sistema facil de atualizar e distribuir.
+
+Prompt:
+"Revise a estrategia de atualizacao do FacilERP Windows com Tauri. Preserve
+dados locais, variaveis e configuracoes, use versoes semanticas, migrations
+versionadas, backup e rollback. Execute cargo check, tauri build e teste o
+instalador em uma maquina limpa. Nao apague dados nem altere o banco sem
+migration."
+
+ATIVIDADE 10 - DEPENDENCIAS
+---------------------------
+Objetivo:
+Atualizar dependencias sem quebrar o projeto.
+
+Prompt:
+"Analise npm audit do FacilERP e GFacilERP. Proponha uma atualizacao
+controlada de Next, PostCSS, Tailwind e dependencias transitivas. Nao execute
+npm audit fix --force automaticamente. Crie uma branch ou commit separado,
+rode build, testes e verifique compatibilidade antes de publicar."
+
+CHECKLIST FINAL
+---------------
+- [ ] Nenhum .env.local foi enviado ao GitHub.
+- [ ] Nenhuma service_role foi exposta.
+- [ ] Ambos os projetos compilam.
+- [ ] Supabase do FacilERP esta configurado.
+- [ ] Supabase do GFacilERP esta configurado.
+- [ ] Primeiro administrador foi criado.
+- [ ] RLS esta ativo.
+- [ ] Policies foram testadas.
+- [ ] CRUD foi testado com dados reais.
+- [ ] Uploads sao privados.
+- [ ] Auditoria funciona.
+- [ ] Edge Functions usam segredos somente no servidor.
+- [ ] Integracao futura esta documentada.
+- [ ] Atualizacao Windows foi testada.
+- [ ] Mudancas foram commitadas e publicadas nos repositorios corretos.
+
+ARQUIVOS IMPORTANTES
+---------------------
+- FacilERP/supabase/schema.sql
+- FacilERP/supabase/fix-permissions.sql
+- FacilERP/STATUS_PROJETO.txt
+- GFacilERP/supabase/schema.sql
+- GFacilERP/STATUS_GFACILERP.txt
+- GFacilERP/README.md
