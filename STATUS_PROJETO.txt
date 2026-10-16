@@ -270,6 +270,8 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - Criado PENDENCIAS_PARA_OUTRA_IA.txt com atividades, prompts, ordem de
   execução, critérios de sucesso e cuidados para continuidade por outro
   usuário sem experiência de programação.
+- Criado ATIVIDADES_SEM_DADOS_SENSIVEIS.txt com tarefas que podem ser
+  executadas sem banco, Supabase, credenciais ou dados reais.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------
