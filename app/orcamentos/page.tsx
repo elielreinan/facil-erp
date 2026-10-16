@@ -39,9 +39,17 @@ export default function OrcamentosPage() {
     try {
       const { supabase, profile } = await getCurrentProfile();
       if (!profile) { window.location.replace('/login'); return; }
-      const { data, error } = await supabase.from('orcamentos').select('id,nome_projeto,status,valor_previsto_total,criado_em').order('criado_em', { ascending: false });
-      if (error) throw error;
-      setBudgets((data ?? []).map((budget) => ({ id: budget.id, name: budget.nome_projeto, center: 'Não informado', status: budget.status, planned: budget.valor_previsto_total, realized: 0, manager: 'Não informado', updatedAt: new Date(budget.criado_em).toLocaleDateString('pt-BR'), items: 0, documents: [] })));
+      const [budgetResult, executedResult] = await Promise.all([
+        supabase.from('orcamentos').select('id,nome_projeto,status,valor_previsto_total,criado_em').order('criado_em', { ascending: false }),
+        supabase.from('executado_itens').select('orcamento_id,qtd_realizada,valor_realizado_unitario'),
+      ]);
+      if (budgetResult.error) throw budgetResult.error;
+      if (executedResult.error) throw executedResult.error;
+      const realizedByBudget = new Map<string, number>();
+      (executedResult.data ?? []).forEach((item) => {
+        realizedByBudget.set(item.orcamento_id, (realizedByBudget.get(item.orcamento_id) ?? 0) + Number(item.qtd_realizada) * Number(item.valor_realizado_unitario));
+      });
+      setBudgets((budgetResult.data ?? []).map((budget) => ({ id: budget.id, name: budget.nome_projeto, center: 'Não informado', status: budget.status, planned: Number(budget.valor_previsto_total), realized: realizedByBudget.get(budget.id) ?? 0, manager: 'Não informado', updatedAt: new Date(budget.criado_em).toLocaleDateString('pt-BR'), items: 0, documents: [] })));
     } catch (caughtError) { console.error('Falha ao carregar orçamentos:', caughtError); setFormError('Não foi possível carregar os orçamentos.'); }
     finally { setLoading(false); }
   }
@@ -53,6 +61,7 @@ export default function OrcamentosPage() {
       return matchesSearch && (!statusFilter || budget.status === statusFilter);
     });
   }, [search, statusFilter]);
+  const statusOptions = useMemo(() => Array.from(new Set(budgets.map((budget) => budget.status).filter(Boolean))), [budgets]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,7 +118,7 @@ export default function OrcamentosPage() {
           {isFormOpen ? <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50" onClick={() => setIsFormOpen(false)} type="button">Fechar formulário</button> : <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={() => { setIsFormOpen(true); setSuccessMessage(''); }} type="button">Novo orçamento</button>}
         </div>
         <SearchFilters
-          filters={[{ label: 'Status', value: statusFilter, options: [], onChange: setStatusFilter }]}
+          filters={[{ label: 'Status', value: statusFilter, options: statusOptions, onChange: setStatusFilter }]}
           onSearchChange={setSearch}
           placeholder="Buscar por projeto ou centro de custo"
           search={search}
@@ -131,7 +140,7 @@ export default function OrcamentosPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredBudgets.map((budget) => {
-                const percentage = Math.round((budget.realized / budget.planned) * 1000) / 10;
+                const percentage = budget.planned > 0 ? Math.round((budget.realized / budget.planned) * 1000) / 10 : 0;
                 const statusClass = budget.status === 'Atenção' ? 'bg-amber-50 text-amber-700' : budget.status === 'Concluído' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700';
                 return (
                   <Fragment key={budget.name}>

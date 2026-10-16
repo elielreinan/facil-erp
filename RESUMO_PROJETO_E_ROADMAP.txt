@@ -199,10 +199,10 @@ Estimativa por area:
 - Interface e navegacao: 80%.
 - Autenticacao inicial: 70%.
 - Banco e RLS inicial: 65%.
-- CRUD operacional completo: 50%.
+- CRUD operacional completo: 65%.
 - Orcamentos previsto x realizado: 40%.
-- Patrimonio com QR Code: 55%.
-- Notas fiscais com QR Code: 30%.
+- Patrimonio com QR Code: 60%.
+- Notas fiscais com QR Code: 40%.
 - GFacilERP administrativo: 45%.
 - Auditoria e operacoes administrativas seguras: 30%.
 - Storage privado: 20%.

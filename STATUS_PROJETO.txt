@@ -277,6 +277,12 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   patrimonio e notas fiscais e estimativa geral de 60% de conclusao.
 - Scanner QR reutilizado em Notas Fiscais e geração local de etiquetas QR de
   patrimônio implementados sem alterar banco, RLS, Storage ou credenciais.
+- Adicionadas edição e exclusão de entradas de Suprimentos, Notas Fiscais e
+  Patrimônio, com confirmação e mensagens explícitas.
+- Orçamentos passaram a calcular o realizado a partir dos itens executados e
+  a oferecer filtro pelos status existentes.
+- Restaurados os documentos PENDENCIAS_PARA_OUTRA_IA.txt e
+  ATIVIDADES_SEM_DADOS_SENSIVEIS.txt para permanecerem versionados.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------
