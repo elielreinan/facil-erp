@@ -303,6 +303,9 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - Correção de interpretação: os 5% mencionados pelo responsável referem-se
   ao saldo de créditos do Copilot, não ao percentual restante ou concluído
   do projeto. Os percentuais do roadmap são estimativas por área.
+- Recalculada a conclusão geral para 61% usando média ponderada por escopo,
+  com peso maior para banco/RLS, CRUD, segurança, testes e integração.
+  Essa porcentagem mede o projeto e não o consumo de créditos.
 
 PENDÊNCIAS CONSOLIDADAS - 16/10/2026
 -------------------------------------

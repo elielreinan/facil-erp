@@ -184,9 +184,11 @@ Prioridade 4 - Produto Windows e integracao:
 ESTIMATIVA DE CONCLUSAO
 -----------------------
 Estimativa de produto:
-- Nao existe uma porcentagem unica confiavel para todo o sistema.
-- As porcentagens por area abaixo sao estimativas de implementacao, nao
-  representam o uso ou o saldo de creditos do Copilot.
+- Conclusao geral estimada: 61%.
+- Esta e uma media ponderada de escopo, nao uma contagem de telas ou linhas
+  de codigo.
+- As porcentagens por area abaixo nao representam o uso ou o saldo de
+  creditos do Copilot.
 
 Esta porcentagem considera que:
 - a base visual e arquitetural esta pronta;
@@ -205,21 +207,39 @@ OBSERVACAO SOBRE CREDITOS
 - Ele nao representa conclusão, progresso ou percentual restante do FacilERP
   ou do GFacilERP.
 
-Estimativa por area:
-- Estrutura dos aplicativos: 90%.
-- Interface e navegacao: 80%.
-- Autenticacao inicial: 70%.
-- Banco e RLS inicial: 65%.
-- CRUD operacional completo: 80%.
-- Orcamentos previsto x realizado: 40%.
-- Patrimonio com QR Code: 75%.
-- Notas fiscais com QR Code: 55%.
-- GFacilERP administrativo: 45%.
-- Auditoria e operacoes administrativas seguras: 30%.
-- Storage privado: 20%.
-- Testes automatizados: 50%.
-- Aplicativo Windows e instalador: 85%.
-- Integracao entre sistemas: 15%.
+Estimativa por area e peso no calculo:
+- Estrutura dos aplicativos: 90% (peso 10%).
+- Interface e navegacao: 85% (peso 10%).
+- Autenticacao inicial: 65% (peso 10%).
+- Banco e RLS inicial: 55% (peso 15%).
+- CRUD operacional completo: 70% (peso 15%).
+- Orcamentos previsto x realizado: 40% (peso 10%).
+- Patrimonio e QR Code: 55% (peso 5%).
+- Notas fiscais e QR Code: 45% (peso 5%).
+- GFacilERP administrativo: 45% (peso 10%).
+- Auditoria e seguranca operacional: 30% (peso 5%).
+- Storage e anexos: 20% (peso 3%).
+- Testes automatizados e qualidade: 50% (peso 5%).
+- Aplicativo Windows e instalador: 85% (peso 5%).
+- Integracao entre sistemas: 15% (peso 2%).
+
+MEMORIA DO CALCULO
+------------------
+Cada percentual de area foi multiplicado pelo peso correspondente e os
+resultados foram somados. O resultado arredondado foi 61%.
+
+O calculo considera como incompleto um recurso que possui tela, mas ainda
+nao possui persistencia validada, autorizacao testada, auditoria, tratamento
+de falhas ou teste operacional. Por isso a porcentagem geral e menor que a
+impressao visual causada pela quantidade de telas prontas.
+
+LEITURA DO RESULTADO
+--------------------
+- 61%: base funcional em desenvolvimento, ainda nao pronta para producao
+  corporativa completa.
+- Aproximadamente 39%: banco final, seguranca server-side, Storage,
+  administracao completa, testes de ambiente, atualizacao e integracao.
+- O saldo de creditos do Copilot e uma medida separada e nao entra no calculo.
 
 COMO INTERPRETAR A PORCENTAGEM
 ------------------------------
