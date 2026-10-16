@@ -306,6 +306,9 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - Recalculada a conclusão geral para 61% usando média ponderada por escopo,
   com peso maior para banco/RLS, CRUD, segurança, testes e integração.
   Essa porcentagem mede o projeto e não o consumo de créditos.
+- Criado GUIA_CONTINUIDADE_OUTRA_IA.txt com contexto técnico, ordem de
+  execução, regras de segurança, normas de desenvolvimento, comandos,
+  critérios de conclusão e pendências para outra IA.
 
 PENDÊNCIAS CONSOLIDADAS - 16/10/2026
 -------------------------------------
