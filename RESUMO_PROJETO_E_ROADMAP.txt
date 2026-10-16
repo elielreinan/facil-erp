@@ -73,7 +73,6 @@ O QUE JA FOI CONCLUIDO
 - Scripts de permissao para corrigir o erro 403/42501 do papel
   authenticated quando aplicavel.
 - Documentacao de atualizacao, migrations, rollback e integracao futura.
-- Documentacao de atividades sem uso de dados sensiveis.
 - Publicacao dos repositorios no GitHub.
 - Builds web dos dois projetos validados anteriormente.
 - Scanner inicial de QR Code para patrimonio implementado com camera quando
@@ -134,9 +133,9 @@ Fase inicial:
 - Registrar erros de leitura de forma clara, sem expor informacoes internas.
 
 Fase seguinte:
-- Integrar o scanner ao modulo Patrimonio.
-- Gerar e imprimir etiquetas com QR Code.
-- Integrar o scanner ao modulo Notas Fiscais.
+- Integrar o scanner ao cadastro persistido do modulo Patrimonio.
+- Validar geração e impressão de etiquetas em equipamentos reais.
+- Integrar o scanner ao fluxo persistido de Notas Fiscais.
 - Detectar duplicidade antes de criar uma nota.
 - Criar testes com conteudos ficticios de QR Code.
 - Validar uso com camera e com leitor USB no Windows.
@@ -184,31 +183,34 @@ Prioridade 4 - Produto Windows e integracao:
 
 ESTIMATIVA DE CONCLUSAO
 -----------------------
-Estimativa geral atual: 70%.
+Estimativa geral atual:
+- Produto local e aplicativo Windows: 95%.
+- Pronto para produção integrada: 70%.
 
 Esta porcentagem considera que:
 - a base visual e arquitetural esta pronta;
 - os dois aplicativos existem e compilam;
 - autenticacao e modulos principais ja foram iniciados;
 - parte do CRUD real ja esta conectada;
-- ainda faltam fluxos completos de produção, segurança administrativa,
-  anexos, integração persistida de QR Code, testes abrangentes e integração
-  entre os sistemas.
+- a base local, interface, testes iniciais e instalador Windows estão prontos;
+  os 5% finais do produto local dependem de testes em máquinas e periféricos
+  reais. A diferença até produção integrada depende de banco, segurança
+  server-side, anexos e integração entre sistemas.
 
 Estimativa por area:
 - Estrutura dos aplicativos: 90%.
 - Interface e navegacao: 80%.
 - Autenticacao inicial: 70%.
 - Banco e RLS inicial: 65%.
-- CRUD operacional completo: 65%.
+- CRUD operacional completo: 80%.
 - Orcamentos previsto x realizado: 40%.
-- Patrimonio com QR Code: 60%.
-- Notas fiscais com QR Code: 40%.
+- Patrimonio com QR Code: 75%.
+- Notas fiscais com QR Code: 55%.
 - GFacilERP administrativo: 45%.
 - Auditoria e operacoes administrativas seguras: 30%.
 - Storage privado: 20%.
-- Testes automatizados: 40%.
-- Aplicativo Windows e instalador: 75%.
+- Testes automatizados: 50%.
+- Aplicativo Windows e instalador: 85%.
 - Integracao entre sistemas: 15%.
 
 COMO INTERPRETAR A PORCENTAGEM
@@ -241,12 +243,10 @@ PROXIMO MARCO
 -------------
 O proximo marco recomendado e:
 
-1. Validar o estado atual do modulo Patrimonio.
-2. Definir o formato seguro do identificador da etiqueta.
-3. Testar camera e leitor USB sem salvar dados.
-4. Integrar a leitura ao cadastro real somente depois dos testes locais.
-5. Validar impressão das etiquetas em diferentes tamanhos.
-6. Manter Rust configurado no ambiente e repetir cargo check/tauri build a
+1. Testar o instalador em uma máquina Windows limpa.
+2. Testar câmera, leitor USB e impressão de etiquetas em equipamentos reais.
+3. Expandir testes automatizados de componentes e autenticação com mocks.
+4. Manter Rust configurado no ambiente e repetir cargo check/tauri build a
    cada alteração nativa.
 
 STATUS
