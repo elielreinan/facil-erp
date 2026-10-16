@@ -207,7 +207,7 @@ Estimativa por area:
 - Auditoria e operacoes administrativas seguras: 30%.
 - Storage privado: 20%.
 - Testes automatizados: 25%.
-- Aplicativo Windows e instalador: 35%.
+- Aplicativo Windows e instalador: 40%.
 - Integracao entre sistemas: 15%.
 
 COMO INTERPRETAR A PORCENTAGEM
@@ -245,6 +245,7 @@ O proximo marco recomendado e:
 3. Testar camera e leitor USB sem salvar dados.
 4. Integrar a leitura ao cadastro real somente depois dos testes locais.
 5. Validar impressão das etiquetas em diferentes tamanhos.
+6. Instalar/configurar Rust no PATH e executar cargo check e tauri build.
 
 STATUS
 ------

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ServiceWorkerCleanup } from '../components/service-worker-cleanup';
+import { ClientDiagnostics } from '../components/client-diagnostics';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body><ServiceWorkerCleanup />{children}</body>
+      <body><ServiceWorkerCleanup /><ClientDiagnostics />{children}</body>
     </html>
   );
 }

@@ -283,6 +283,12 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   a oferecer filtro pelos status existentes.
 - Restaurados os documentos PENDENCIAS_PARA_OUTRA_IA.txt e
   ATIVIDADES_SEM_DADOS_SENSIVEIS.txt para permanecerem versionados.
+- Criado diagnóstico local com exportação e limpeza, sem envio automático de
+  mensagens ou dados; erros não tratados são registrados somente no
+  armazenamento local do computador.
+- Versões do pacote web e do aplicativo Tauri alinhadas em 0.1.5.
+- Build web validado; cargo check permanece pendente porque cargo não está
+  disponível no PATH deste terminal.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------

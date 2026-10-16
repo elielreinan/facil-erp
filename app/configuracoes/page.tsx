@@ -2,18 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { ErpShell } from '../../components/erp-shell';
-
-const serverErrors: string[][] = [];
+import { clearClientErrors, readClientErrors, type ClientErrorEntry } from '../../lib/client-error-log';
 
 export default function ConfiguracoesPage() {
   const [message, setMessage] = useState('');
   const [highContrast, setHighContrast] = useState(false);
   const [confirmActions, setConfirmActions] = useState(true);
   const [density, setDensity] = useState('comfortable');
+  const [clientErrors, setClientErrors] = useState<ClientErrorEntry[]>([]);
   useEffect(() => {
     setHighContrast(localStorage.getItem('facilerp.highContrast') === 'true');
     setConfirmActions(localStorage.getItem('facilerp.confirmActions') !== 'false');
     setDensity(localStorage.getItem('facilerp.density') ?? 'comfortable');
+    setClientErrors(readClientErrors());
+    const updateDiagnostics = () => setClientErrors(readClientErrors());
+    window.addEventListener('facilerp:diagnostics-changed', updateDiagnostics);
+    return () => window.removeEventListener('facilerp:diagnostics-changed', updateDiagnostics);
   }, []);
   function savePreferences() {
     if (!window.confirm('Confirmar salvamento das preferências neste computador?')) return;
@@ -24,7 +28,7 @@ export default function ConfiguracoesPage() {
     setMessage('Preferências salvas neste computador.');
   }
   function exportErrors() {
-    const content = serverErrors.map((error) => `[${error[0]}] ${error[1]} ${error[2]}`).join('\n');
+    const content = clientErrors.map((error) => `[${error.timestamp}] ${error.level} ${error.message}`).join('\n');
     const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
@@ -32,6 +36,11 @@ export default function ConfiguracoesPage() {
     link.click();
     URL.revokeObjectURL(url);
     setMessage('Log de erros exportado.');
+  }
+  function clearErrors() {
+    if (!window.confirm('Limpar o diagnóstico local deste computador?')) return;
+    clearClientErrors();
+    setMessage('Diagnóstico local limpo.');
   }
   return <ErpShell eyebrow="Administração do aplicativo" title="Configurações">
     {message && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">{message}</p>}
@@ -46,9 +55,9 @@ export default function ConfiguracoesPage() {
       <button className="mt-5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={savePreferences} type="button">Salvar preferências</button>
     </section>
     <section aria-labelledby="diagnostics-title" className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-lg font-bold" id="diagnostics-title">Diagnóstico do servidor</h2><p className="mt-1 text-sm text-slate-500">Eventos de erro retornados pelos serviços do FacilERP.</p></div><span className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">Versão 0.1.5</span></div>
-      <div aria-label="Terminal de erros do servidor" className="mt-5 overflow-x-auto rounded-lg bg-[#0b1220] p-4 font-mono text-xs leading-6 text-slate-200" role="region" tabIndex={0}><div className="mb-3 border-b border-slate-700 pb-2 text-slate-400">$ facil-erp server --errors --tail=3</div>{serverErrors.length === 0 ? <p className="text-slate-400">Nenhum erro registrado.</p> : serverErrors.map((error) => <div className="whitespace-nowrap" key={error[0]}><span className="text-slate-500">[{error[0]}]</span> <span className={error[1] === 'ERROR' ? 'text-red-400' : 'text-amber-300'}>{error[1]}</span> <span>{error[2]}</span></div>)}</div>
-      <div className="mt-4 flex justify-end"><button className="text-sm font-bold text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={exportErrors} type="button">Exportar erros</button></div>
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-lg font-bold" id="diagnostics-title">Diagnóstico local</h2><p className="mt-1 text-sm text-slate-500">Erros registrados somente neste computador; nada é enviado automaticamente.</p></div><span className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">Versão 0.1.5</span></div>
+      <div aria-label="Diagnóstico local do aplicativo" className="mt-5 overflow-x-auto rounded-lg bg-[#0b1220] p-4 font-mono text-xs leading-6 text-slate-200" role="region" tabIndex={0}><div className="mb-3 border-b border-slate-700 pb-2 text-slate-400">$ facilerp diagnostics --local</div>{clientErrors.length === 0 ? <p className="text-slate-400">Nenhum erro registrado.</p> : clientErrors.slice(-3).map((error) => <div className="whitespace-nowrap" key={`${error.timestamp}-${error.message}`}><span className="text-slate-500">[{error.timestamp}]</span> <span className={error.level === 'ERROR' ? 'text-red-400' : 'text-amber-300'}>{error.level}</span> <span>{error.message}</span></div>)}</div>
+      <div className="mt-4 flex justify-end gap-4"><button className="text-sm font-bold text-slate-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={clearErrors} type="button">Limpar diagnóstico</button><button className="text-sm font-bold text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={exportErrors} type="button">Exportar erros</button></div>
     </section>
   </ErpShell>;
 }
