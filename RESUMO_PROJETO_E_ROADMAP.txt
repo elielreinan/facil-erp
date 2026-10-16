@@ -184,15 +184,16 @@ Prioridade 4 - Produto Windows e integracao:
 
 ESTIMATIVA DE CONCLUSAO
 -----------------------
-Estimativa geral atual: 60%.
+Estimativa geral atual: 70%.
 
 Esta porcentagem considera que:
 - a base visual e arquitetural esta pronta;
 - os dois aplicativos existem e compilam;
 - autenticacao e modulos principais ja foram iniciados;
 - parte do CRUD real ja esta conectada;
-- ainda faltam fluxos completos de producao, seguranca administrativa,
-  anexos, QR Code, instalador Windows, testes abrangentes e integracao.
+- ainda faltam fluxos completos de produção, segurança administrativa,
+  anexos, integração persistida de QR Code, testes abrangentes e integração
+  entre os sistemas.
 
 Estimativa por area:
 - Estrutura dos aplicativos: 90%.
@@ -207,7 +208,7 @@ Estimativa por area:
 - Auditoria e operacoes administrativas seguras: 30%.
 - Storage privado: 20%.
 - Testes automatizados: 40%.
-- Aplicativo Windows e instalador: 65%.
+- Aplicativo Windows e instalador: 75%.
 - Integracao entre sistemas: 15%.
 
 COMO INTERPRETAR A PORCENTAGEM
@@ -254,6 +255,17 @@ O projeto possui uma base funcional e esta em evolucao. A prioridade agora
 e transformar os modulos iniciais em fluxos operacionais completos, adicionar
 leitura de QR Code para patrimonio e notas fiscais, reforcar seguranca e
 validar a distribuicao como aplicativo Windows.
+
+ATUALIZACAO DE STATUS - 16/10/2026
+----------------------------------
+- Servidores de desenvolvimento encerrados; nenhuma porta 3000, 3001 ou 1420
+  permaneceu em escuta após a finalização.
+- Rust validado com cargo check.
+- Instalador NSIS x64 gerado com sucesso na versão 0.1.5.
+- Testes locais de validação aprovados.
+- Exportação local de catálogo de relatórios aprovada.
+- Guias para outro colaborador removidos do repositório conforme decisão do
+  responsável pelo projeto.
 
 PENDENCIAS APOS ESTA ETAPA
 --------------------------

@@ -267,11 +267,8 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - Criado supabase/fix-permissions.sql para corrigir privilégios do papel
   authenticated quando a Data API retornar 403/42501 ao consultar insumos.
 - Removida a assinatura do rodapé do GFacilERP conforme solicitação.
-- Criado PENDENCIAS_PARA_OUTRA_IA.txt com atividades, prompts, ordem de
-  execução, critérios de sucesso e cuidados para continuidade por outro
-  usuário sem experiência de programação.
-- Criado ATIVIDADES_SEM_DADOS_SENSIVEIS.txt com tarefas que podem ser
-  executadas sem banco, Supabase, credenciais ou dados reais.
+- Os guias destinados a outra IA/colaborador foram removidos do projeto em
+  16/10/2026, pois a continuidade voltou a ser feita neste ambiente.
 - Criado RESUMO_PROJETO_E_ROADMAP.txt com a visao geral dos aplicativos,
   funcionalidades atuais, roadmap, ideia de leitura de QR Code para
   patrimonio e notas fiscais e estimativa geral de 60% de conclusao.
@@ -281,8 +278,9 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   Patrimônio, com confirmação e mensagens explícitas.
 - Orçamentos passaram a calcular o realizado a partir dos itens executados e
   a oferecer filtro pelos status existentes.
-- Restaurados os documentos PENDENCIAS_PARA_OUTRA_IA.txt e
-  ATIVIDADES_SEM_DADOS_SENSIVEIS.txt para permanecerem versionados.
+- Os documentos de orientação para outro colaborador deixaram de ser
+  versionados; as pendências atuais permanecem registradas neste arquivo e
+  no RESUMO_PROJETO_E_ROADMAP.txt.
 - Criado diagnóstico local com exportação e limpeza, sem envio automático de
   mensagens ou dados; erros não tratados são registrados somente no
   armazenamento local do computador.
@@ -299,8 +297,10 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - Ajustes de acessibilidade aplicados nos filtros, mensagens e foco visual.
 - Instalador NSIS Windows gerado com sucesso em
   src-tauri/target/release/bundle/nsis/PROJ PARA FACILITAS_0.1.5_x64-setup.exe.
+- Servidores de desenvolvimento das portas 3000, 3001 e 1420 encerrados em
+  16/10/2026.
 
-PENDÊNCIAS CONSOLIDADAS - 15/10/2026
+PENDÊNCIAS CONSOLIDADAS - 16/10/2026
 -------------------------------------
 - Aplicar o schema atualizado no projeto Supabase do FacilERP.
 - Criar Edge Functions/API privada do GFacilERP para criação, aprovação,
@@ -311,8 +311,14 @@ PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 - Criar o primeiro administrador do GFacilERP e seu registro em
   public.administradores.
 - Implementar MFA, rate limit, revogação de sessões e headers de segurança.
-- Finalizar edição e exclusão nos módulos operacionais do FacilERP.
-- Implementar itens previstos e realizados dos orçamentos.
+- Testar o instalador em uma máquina Windows limpa e validar o fluxo de
+  atualização.
+- Validar câmera, leitor USB e impressão de etiquetas em equipamentos reais.
+- Expandir testes automatizados para componentes e fluxos de autenticação
+  com mocks.
+- Revisar acessibilidade em todas as telas.
+- Criar exportações específicas por relatório.
+- Melhorar o mecanismo de atualização do aplicativo Windows.
 - Configurar Storage privado para anexos e políticas de acesso.
 - Criar auditoria automática para mutações do FacilERP.
 - Definir e implementar a integração segura entre GFacilERP e FacilERP.
