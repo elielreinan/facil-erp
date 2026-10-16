@@ -79,6 +79,10 @@ O QUE JA FOI CONCLUIDO
 - Scanner inicial de QR Code para patrimonio implementado com camera quando
   suportada e entrada manual como fallback; a leitura ainda exige revisao e
   nao salva nem consulta automaticamente.
+- Scanner reutilizado em Notas Fiscais para leitura e conferência manual do
+  conteúdo fiscal antes do lançamento.
+- Etiquetas de patrimônio com QR Code geradas localmente e preparadas para
+  impressão; o conteúdo usa somente o identificador do ativo.
 
 NOVA IDEIA: LEITURA DE QR CODE
 ------------------------------
@@ -197,8 +201,8 @@ Estimativa por area:
 - Banco e RLS inicial: 65%.
 - CRUD operacional completo: 50%.
 - Orcamentos previsto x realizado: 40%.
-- Patrimonio com QR Code: 30%.
-- Notas fiscais com QR Code: 10%.
+- Patrimonio com QR Code: 55%.
+- Notas fiscais com QR Code: 30%.
 - GFacilERP administrativo: 45%.
 - Auditoria e operacoes administrativas seguras: 30%.
 - Storage privado: 20%.
@@ -240,7 +244,7 @@ O proximo marco recomendado e:
 2. Definir o formato seguro do identificador da etiqueta.
 3. Testar camera e leitor USB sem salvar dados.
 4. Integrar a leitura ao cadastro real somente depois dos testes locais.
-5. Adicionar geracao e impressao de etiquetas.
+5. Validar impressão das etiquetas em diferentes tamanhos.
 
 STATUS
 ------

@@ -14,9 +14,11 @@ declare global {
   }
 }
 
-export function QrScanner({ onDetected, onClose }: {
+export function QrScanner({ onDetected, onClose, title = 'Ler código QR', description = 'A leitura não salva alterações automaticamente.' }: {
   onDetected: (value: string) => void;
   onClose: () => void;
+  title?: string;
+  description?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -96,8 +98,8 @@ export function QrScanner({ onDetected, onClose }: {
     <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4" role="dialog" aria-modal="true" aria-labelledby="qr-scanner-title">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-bold" id="qr-scanner-title">Ler etiqueta de patrimônio</h3>
-          <p className="mt-1 text-sm text-slate-600">A leitura não salva alterações automaticamente.</p>
+          <h3 className="font-bold" id="qr-scanner-title">{title}</h3>
+          <p className="mt-1 text-sm text-slate-600">{description}</p>
         </div>
         <button className="rounded px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-white" onClick={onClose} type="button">Fechar</button>
       </div>
