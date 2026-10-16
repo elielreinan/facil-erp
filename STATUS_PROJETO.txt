@@ -287,8 +287,18 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   mensagens ou dados; erros não tratados são registrados somente no
   armazenamento local do computador.
 - Versões do pacote web e do aplicativo Tauri alinhadas em 0.1.5.
-- Build web validado; cargo check permanece pendente porque cargo não está
-  disponível no PATH deste terminal.
+- Build web validado; a primeira tentativa de cargo check ficou pendente
+  porque cargo não estava disponível no PATH do terminal.
+- Rust encontrado em C:\Users\eliel\.cargo\bin e cargo check concluído com
+  sucesso usando o caminho completo.
+- Recursos de ícone Tauri gerados em src-tauri/icons, incluindo icon.ico.
+- Testes locais adicionados com Vitest para validações de CNPJ, máscaras,
+  texto seguro e busca; todos os testes passaram.
+- Exportação local do catálogo de relatórios adicionada em CSV UTF-8, sem
+  criar persistência ou consultar dados adicionais.
+- Ajustes de acessibilidade aplicados nos filtros, mensagens e foco visual.
+- Instalador NSIS Windows gerado com sucesso em
+  src-tauri/target/release/bundle/nsis/PROJ PARA FACILITAS_0.1.5_x64-setup.exe.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------

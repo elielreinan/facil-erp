@@ -23,9 +23,19 @@ export default function RelatoriosPage() {
       setMessage('Não foi possível consultar os dados do relatório.');
     }
   }
+  function exportReportCatalog() {
+    const rows = [['Relatório', 'Descrição', 'Período selecionado'], ...reportTypes.map(([name, description]) => [name, description, period || 'Todos'])];
+    const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(';')).join('\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+    link.download = 'facilerp-catalogo-relatorios.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setMessage('Catálogo de relatórios exportado localmente.');
+  }
   return <ErpShell eyebrow="Análise gerencial" title="Relatórios">
-    <SearchFilters onSearchChange={setSearch} placeholder="Nome ou finalidade do relatório" search={search} filters={[{ label: 'Período', value: period, options: ['Este mês', 'Últimos 90 dias', 'Ano atual'], onChange: setPeriod }]} />
-    {message && <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">{message}</p>}
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><SearchFilters onSearchChange={setSearch} placeholder="Nome ou finalidade do relatório" search={search} filters={[{ label: 'Período', value: period, options: ['Este mês', 'Últimos 90 dias', 'Ano atual'], onChange: setPeriod }]} /><button className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300" onClick={exportReportCatalog} type="button">Exportar catálogo</button></div>
+    {message && <p aria-live="polite" className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">{message}</p>}
     <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{reportTypes.map(([name, description]) => <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={name}><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-lg text-blue-700">▥</div><h2 className="mt-4 font-bold">{name}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{description}</p><button className="mt-5 text-sm font-bold text-blue-700 hover:underline" onClick={() => void generateReport(name)} type="button">Consultar dados</button></article>)}</section>
   </ErpShell>;
 }

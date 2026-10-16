@@ -206,8 +206,8 @@ Estimativa por area:
 - GFacilERP administrativo: 45%.
 - Auditoria e operacoes administrativas seguras: 30%.
 - Storage privado: 20%.
-- Testes automatizados: 25%.
-- Aplicativo Windows e instalador: 40%.
+- Testes automatizados: 40%.
+- Aplicativo Windows e instalador: 65%.
 - Integracao entre sistemas: 15%.
 
 COMO INTERPRETAR A PORCENTAGEM
@@ -245,7 +245,8 @@ O proximo marco recomendado e:
 3. Testar camera e leitor USB sem salvar dados.
 4. Integrar a leitura ao cadastro real somente depois dos testes locais.
 5. Validar impressão das etiquetas em diferentes tamanhos.
-6. Instalar/configurar Rust no PATH e executar cargo check e tauri build.
+6. Manter Rust configurado no ambiente e repetir cargo check/tauri build a
+   cada alteração nativa.
 
 STATUS
 ------
@@ -253,3 +254,27 @@ O projeto possui uma base funcional e esta em evolucao. A prioridade agora
 e transformar os modulos iniciais em fluxos operacionais completos, adicionar
 leitura de QR Code para patrimonio e notas fiscais, reforcar seguranca e
 validar a distribuicao como aplicativo Windows.
+
+PENDENCIAS APOS ESTA ETAPA
+--------------------------
+Sem banco de dados:
+- Testar o instalador em uma maquina Windows limpa.
+- Validar camera, leitor USB e impressao de etiquetas em equipamentos reais.
+- Expandir testes automatizados para componentes e fluxos de autenticacao
+  com mocks.
+- Revisar contraste e navegacao por teclado em todas as telas.
+- Adicionar exportacoes especificas por relatorio, quando o formato dos dados
+  persistidos estiver definido.
+- Melhorar atualizacao automatica do aplicativo Windows.
+
+Dependentes de banco ou infraestrutura:
+- Aplicar e versionar migrations do Supabase.
+- Corrigir grants e policies RLS por setor e nivel.
+- Implementar Storage privado para XML, PDF e documentos.
+- Completar auditoria server-side.
+- Implementar Edge Functions/API administrativa do GFacilERP.
+- Adicionar MFA, rate limit, revogacao de sessoes e headers de seguranca.
+- Integrar dados previstos e realizados de orcamentos com CRUD completo.
+- Integrar QR Code a consultas persistidas e validar duplicidade de notas.
+- Definir integracao versionada entre FacilERP, GFacilERP e sistemas externos.
+- Publicar versoes e instaladores em um fluxo controlado de release.
