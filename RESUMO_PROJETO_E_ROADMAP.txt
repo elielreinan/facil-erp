@@ -76,6 +76,9 @@ O QUE JA FOI CONCLUIDO
 - Documentacao de atividades sem uso de dados sensiveis.
 - Publicacao dos repositorios no GitHub.
 - Builds web dos dois projetos validados anteriormente.
+- Scanner inicial de QR Code para patrimonio implementado com camera quando
+  suportada e entrada manual como fallback; a leitura ainda exige revisao e
+  nao salva nem consulta automaticamente.
 
 NOVA IDEIA: LEITURA DE QR CODE
 ------------------------------
@@ -194,7 +197,7 @@ Estimativa por area:
 - Banco e RLS inicial: 65%.
 - CRUD operacional completo: 50%.
 - Orcamentos previsto x realizado: 40%.
-- Patrimonio com QR Code: 15%.
+- Patrimonio com QR Code: 30%.
 - Notas fiscais com QR Code: 10%.
 - GFacilERP administrativo: 45%.
 - Auditoria e operacoes administrativas seguras: 30%.
@@ -235,9 +238,9 @@ O proximo marco recomendado e:
 
 1. Validar o estado atual do modulo Patrimonio.
 2. Definir o formato seguro do identificador da etiqueta.
-3. Criar um componente de leitura isolado, inicialmente com dados ficticios.
-4. Testar camera e leitor USB sem salvar dados.
-5. Integrar a leitura ao cadastro real somente depois dos testes locais.
+3. Testar camera e leitor USB sem salvar dados.
+4. Integrar a leitura ao cadastro real somente depois dos testes locais.
+5. Adicionar geracao e impressao de etiquetas.
 
 STATUS
 ------
