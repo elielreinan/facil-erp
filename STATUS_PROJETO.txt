@@ -262,6 +262,11 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 - npm audit encontrou vulnerabilidades transitivas em Next.js 14, PostCSS,
   Tailwind e braces; a correção automática exige upgrades major e deve ser
   planejada com nova validação de compatibilidade.
+- Corrigadas as preferências visuais de alto contraste e modo compacto para
+  aplicar classes reais ao shell do FacilERP após salvar.
+- Criado supabase/fix-permissions.sql para corrigir privilégios do papel
+  authenticated quando a Data API retornar 403/42501 ao consultar insumos.
+- Removida a assinatura do rodapé do GFacilERP conforme solicitação.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------

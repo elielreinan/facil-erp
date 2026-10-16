@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getSupabaseClient } from '../lib/supabase';
 
 const modules = [
@@ -40,8 +40,16 @@ export function ErpShell({ children, eyebrow, title }: {
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [highContrast, setHighContrast] = useState(false);
+  const [compact, setCompact] = useState(false);
 
   useEffect(() => {
+    const applyPreferences = () => {
+      setHighContrast(localStorage.getItem('facilerp.highContrast') === 'true');
+      setCompact(localStorage.getItem('facilerp.density') === 'compact');
+    };
+    applyPreferences();
+    window.addEventListener('facilerp:preferences-changed', applyPreferences);
     let active = true;
     getSupabaseClient().auth.getUser().then(({ data, error }) => {
       if (active && (error || !data.user)) router.replace('/login');
@@ -51,11 +59,12 @@ export function ErpShell({ children, eyebrow, title }: {
     });
     return () => {
       active = false;
+      window.removeEventListener('facilerp:preferences-changed', applyPreferences);
     };
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
+    <main className={`min-h-screen bg-[#f5f7fb] text-slate-900 ${highContrast ? 'erp-high-contrast' : ''} ${compact ? 'erp-compact' : ''}`}>
       <aside className="fixed inset-y-0 left-0 z-20 flex w-56 flex-col bg-[#102a43] text-white shadow-xl sm:w-64">
         <div className="border-b border-white/10 px-6 py-6">
           <p className="text-xs font-bold tracking-[0.22em] text-blue-300">FACIL ERP</p>

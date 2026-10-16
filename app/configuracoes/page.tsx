@@ -20,6 +20,7 @@ export default function ConfiguracoesPage() {
     localStorage.setItem('facilerp.highContrast', String(highContrast));
     localStorage.setItem('facilerp.confirmActions', String(confirmActions));
     localStorage.setItem('facilerp.density', density);
+    window.dispatchEvent(new Event('facilerp:preferences-changed'));
     setMessage('Preferências salvas neste computador.');
   }
   function exportErrors() {

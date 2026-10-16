@@ -49,10 +49,11 @@ CONCLUIDO
 - Criada a tela de usuarios, inicialmente sem dados ficticios.
 - Criadas as telas de auditoria e configuracoes.
 - Criada validacao compartilhada de acesso administrativo.
-- Criado rodape com o texto "Codado por 2E" e link para
-  https://instagram.com.
+- Rodape administrativo mantido sem assinatura ou link promocional.
 - Criado package-lock.json.
 - Build de producao validado com sucesso.
+- Schema preparado para CRUD administrativo de usuarios gerenciados, com RLS
+  para administradores e trigger de atualizado_em.
 - Variaveis de ambiente locais protegidas pelo .gitignore.
 - Nenhuma senha, chave privada, token ou dado real deve ser versionado.
 
@@ -86,6 +87,8 @@ PENDENCIAS PRIORITARIAS
 - Criar testes automatizados de autenticacao, autorizacao e auditoria.
 - Definir o contrato de integracao com o FacilERP.
 - Decidir entre API segura, sincronizacao controlada ou SSO.
+- Criar GFacilERP/.env.local após o projeto Supabase existir; atualmente esse
+  arquivo ainda não existe e não há conexão local configurada.
 
 REGRAS DE SEGURANCA
 --------------------
@@ -120,6 +123,7 @@ ATUALIZACAO E INTEGRACAO FUTURA
 - Atualizacoes do aplicativo Windows devem preservar dados locais e permitir
   retorno seguro para uma versao anterior quando necessario.
 - Toda mudanca relevante deve ser registrada neste arquivo e no repositorio.
+- A assinatura do rodape foi removida conforme solicitado.
 
 RELACAO DE RESPONSABILIDADES
 ----------------------------
@@ -143,3 +147,5 @@ HISTORICO DE MUDANCAS
 - 15/10/2026 - Criado este arquivo para registrar objetivos, mudancas,
   pendencias, regras de seguranca e a importancia do GFacilERP para o
   FacilERP.
+- 16/10/2026 - Schema preparado para CRUD protegido de usuários gerenciados;
+  conexão local ainda aguarda a criação do projeto Supabase.

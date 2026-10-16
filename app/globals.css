@@ -1,3 +1,38 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.erp-high-contrast {
+  filter: contrast(1.2);
+}
+
+.erp-high-contrast .bg-white {
+  background-color: #ffffff;
+}
+
+.erp-high-contrast .text-slate-500,
+.erp-high-contrast .text-slate-600 {
+  color: #172b4d;
+}
+
+.erp-high-contrast .border-slate-200,
+.erp-high-contrast .border-slate-300 {
+  border-color: #52606d;
+}
+
+.erp-compact .p-5 {
+  padding: 0.75rem;
+}
+
+.erp-compact .p-6 {
+  padding: 1rem;
+}
+
+.erp-compact .p-8 {
+  padding: 1.25rem;
+}
+
+.erp-compact .py-4 {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
