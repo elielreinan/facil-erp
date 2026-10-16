@@ -183,9 +183,10 @@ Prioridade 4 - Produto Windows e integracao:
 
 ESTIMATIVA DE CONCLUSAO
 -----------------------
-Estimativa geral atual:
-- Produto local e aplicativo Windows: 95%.
-- Pronto para produção integrada: 70%.
+Estimativa de produto:
+- Nao existe uma porcentagem unica confiavel para todo o sistema.
+- As porcentagens por area abaixo sao estimativas de implementacao, nao
+  representam o uso ou o saldo de creditos do Copilot.
 
 Esta porcentagem considera que:
 - a base visual e arquitetural esta pronta;
@@ -193,9 +194,16 @@ Esta porcentagem considera que:
 - autenticacao e modulos principais ja foram iniciados;
 - parte do CRUD real ja esta conectada;
 - a base local, interface, testes iniciais e instalador Windows estão prontos;
-  os 5% finais do produto local dependem de testes em máquinas e periféricos
-  reais. A diferença até produção integrada depende de banco, segurança
-  server-side, anexos e integração entre sistemas.
+  ainda dependem de testes em máquinas e periféricos reais, além das etapas
+  de banco, segurança server-side, anexos e integração entre sistemas.
+
+OBSERVACAO SOBRE CREDITOS
+-------------------------
+- Em 16/10/2026, o responsável informou que restavam aproximadamente 5% do
+  limite de créditos do Copilot.
+- Esse percentual se refere somente ao consumo de créditos da ferramenta.
+- Ele nao representa conclusão, progresso ou percentual restante do FacilERP
+  ou do GFacilERP.
 
 Estimativa por area:
 - Estrutura dos aplicativos: 90%.

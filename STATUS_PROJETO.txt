@@ -300,6 +300,9 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   src-tauri/target/release/bundle/nsis/PROJ PARA FACILITAS_0.1.5_x64-setup.exe.
 - Servidores de desenvolvimento das portas 3000, 3001 e 1420 encerrados em
   16/10/2026.
+- Correção de interpretação: os 5% mencionados pelo responsável referem-se
+  ao saldo de créditos do Copilot, não ao percentual restante ou concluído
+  do projeto. Os percentuais do roadmap são estimativas por área.
 
 PENDÊNCIAS CONSOLIDADAS - 16/10/2026
 -------------------------------------
