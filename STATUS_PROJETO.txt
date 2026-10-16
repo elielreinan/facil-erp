@@ -272,6 +272,9 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   usuário sem experiência de programação.
 - Criado ATIVIDADES_SEM_DADOS_SENSIVEIS.txt com tarefas que podem ser
   executadas sem banco, Supabase, credenciais ou dados reais.
+- Criado RESUMO_PROJETO_E_ROADMAP.txt com a visao geral dos aplicativos,
+  funcionalidades atuais, roadmap, ideia de leitura de QR Code para
+  patrimonio e notas fiscais e estimativa geral de 60% de conclusao.
 
 PENDÊNCIAS CONSOLIDADAS - 15/10/2026
 -------------------------------------
