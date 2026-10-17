@@ -8,12 +8,10 @@ const ALLOWED_SECTORS = new Set(['suprimentos', 'orcamentos', 'ti', 'diretoria']
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type RequestPayload =
-  | { action: 'invite'; managed_user_id: string; nome: string; email: string; setor: string }
   | { action: 'set_status'; managed_user_id: string; auth_user_id: string; status: 'aprovado' | 'bloqueado' }
-  | { action: 'set_sector'; managed_user_id: string; auth_user_id: string; setor: string }
-  | { action: 'reset'; managed_user_id: string; auth_user_id: string };
+  | { action: 'set_sector'; managed_user_id: string; auth_user_id: string; setor: string };
 
-type IdentityLink = { managed_user_id: string; auth_user_id: string; email: string };
+type IdentityLink = { managed_user_id: string; auth_user_id: string };
 type Table<Row, Insert, Update = Partial<Insert>> = {
   Row: Row;
   Insert: Insert;
@@ -89,44 +87,8 @@ function getEnv(name: string): string {
   return value;
 }
 
-function getPasswordRedirectUrl(): string {
-  const redirectTo = new URL(getEnv('FACILERP_AUTH_REDIRECT_URL'));
-  const localHost = redirectTo.hostname === 'localhost' && redirectTo.protocol === 'http:';
-  if (
-    (!localHost && redirectTo.protocol !== 'https:') ||
-    redirectTo.pathname !== '/redefinir-senha' ||
-    redirectTo.username ||
-    redirectTo.password ||
-    redirectTo.search ||
-    redirectTo.hash
-  ) {
-    throw new Error('The FacilERP Auth redirect URL must be a trusted HTTPS reset-password URL.');
-  }
-  return redirectTo.toString();
-}
-
 function parseRequest(value: unknown): RequestPayload | null {
   if (!isRecord(value) || !isUuid(value.managed_user_id) || typeof value.action !== 'string') return null;
-
-  if (value.action === 'invite') {
-    if (
-      typeof value.nome !== 'string' ||
-      value.nome.trim().length < 2 ||
-      value.nome.trim().length > 150 ||
-      typeof value.email !== 'string' ||
-      value.email.length > 254 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email) ||
-      typeof value.setor !== 'string' ||
-      !ALLOWED_SECTORS.has(value.setor)
-    ) return null;
-    return {
-      action: 'invite',
-      managed_user_id: value.managed_user_id,
-      nome: value.nome.trim(),
-      email: value.email.trim().toLowerCase(),
-      setor: value.setor,
-    };
-  }
 
   if (!isUuid(value.auth_user_id)) return null;
   if (value.action === 'set_status') {
@@ -145,13 +107,6 @@ function parseRequest(value: unknown): RequestPayload | null {
       managed_user_id: value.managed_user_id,
       auth_user_id: value.auth_user_id,
       setor: value.setor,
-    };
-  }
-  if (value.action === 'reset') {
-    return {
-      action: 'reset',
-      managed_user_id: value.managed_user_id,
-      auth_user_id: value.auth_user_id,
     };
   }
   return null;
@@ -179,7 +134,7 @@ async function getIdentityLink(
 ): Promise<IdentityLink | null> {
   const { data, error } = await client
     .from('gfac_user_links')
-    .select('managed_user_id,auth_user_id,email')
+    .select('managed_user_id,auth_user_id')
     .eq('managed_user_id', managedUserId)
     .maybeSingle();
   if (error) {
@@ -187,92 +142,6 @@ async function getIdentityLink(
     throw new Error('Identity lookup failed.');
   }
   return data as IdentityLink | null;
-}
-
-async function inviteUser(
-  client: ServiceClient,
-  payload: Extract<RequestPayload, { action: 'invite' }>,
-): Promise<{ auth_user_id: string }> {
-  const existingLink = await getIdentityLink(client, payload.managed_user_id);
-  if (existingLink) {
-    const { data: existingAuthUser, error: authLookupError } = await client.auth.admin
-      .getUserById(existingLink.auth_user_id);
-    if (authLookupError || !existingAuthUser.user) {
-      console.error('Linked FacilERP Auth account could not be loaded.', {
-        code: authLookupError?.name ?? 'missing_user',
-      });
-      throw new Error('Linked Auth account is unavailable.');
-    }
-
-    const { error: unbanError } = await client.auth.admin.updateUserById(existingLink.auth_user_id, {
-      ban_duration: 'none',
-    });
-    if (unbanError) {
-      console.error('Failed to enable the invited FacilERP Auth account.', { code: unbanError.name });
-      throw new Error('Auth account activation failed.');
-    }
-
-    const { error: profileError } = await client.from('perfis').upsert({
-      id: existingLink.auth_user_id,
-      nome: payload.nome,
-      email: payload.email,
-      setor: payload.setor,
-      nivel: 'NV1',
-      ativo: true,
-    }, { onConflict: 'id' });
-    if (profileError) {
-      console.error('Failed to synchronize an invited FacilERP profile.', { code: profileError.code });
-      throw new Error('Profile synchronization failed.');
-    }
-    return { auth_user_id: existingLink.auth_user_id };
-  }
-
-  const redirectTo = getPasswordRedirectUrl();
-  const { data: invitation, error: invitationError } = await client.auth.admin.inviteUserByEmail(
-    payload.email,
-    { data: { nome: payload.nome }, redirectTo },
-  );
-  if (invitationError || !invitation.user) {
-    console.error('FacilERP Auth invitation failed.', { code: invitationError?.name ?? 'missing_user' });
-    throw new Error('Auth invitation failed.');
-  }
-
-  const authUserId = invitation.user.id;
-  const { error: linkError } = await client.from('gfac_user_links').insert({
-    managed_user_id: payload.managed_user_id,
-    auth_user_id: authUserId,
-    email: payload.email,
-  });
-  if (linkError) {
-    console.error('Failed to persist the GFacilERP identity link.', { code: linkError.code });
-    const { error: profileCleanupError } = await client.from('perfis').delete().eq('id', authUserId);
-    if (profileCleanupError) {
-      console.error('Failed to remove a profile after identity-link creation failed.', {
-        code: profileCleanupError.code,
-      });
-    }
-    const { error: authCleanupError } = await client.auth.admin.deleteUser(authUserId);
-    if (authCleanupError) {
-      console.error('Failed to remove an Auth user after identity-link creation failed.', {
-        code: authCleanupError.name,
-      });
-    }
-    throw new Error('Identity link creation failed.');
-  }
-
-  const { error: profileError } = await client.from('perfis').upsert({
-    id: authUserId,
-    nome: payload.nome,
-    email: payload.email,
-    setor: payload.setor,
-    nivel: 'NV1',
-    ativo: true,
-  }, { onConflict: 'id' });
-  if (profileError) {
-    console.error('Failed to create the invited FacilERP profile.', { code: profileError.code });
-    throw new Error('Profile creation failed; the identity link was retained for safe retry.');
-  }
-  return { auth_user_id: authUserId };
 }
 
 async function requireIdentityLink(
@@ -289,8 +158,6 @@ async function applyOperation(
   client: ServiceClient,
   payload: RequestPayload,
 ): Promise<Record<string, unknown>> {
-  if (payload.action === 'invite') return await inviteUser(client, payload);
-
   const link = await requireIdentityLink(client, payload.managed_user_id, payload.auth_user_id);
   if (payload.action === 'set_status') {
     const active = payload.status === 'aprovado';
@@ -339,19 +206,7 @@ async function applyOperation(
     return { auth_user_id: link.auth_user_id, setor: payload.setor };
   }
 
-  const redirectTo = getPasswordRedirectUrl();
-  const anonKey = getEnv('SUPABASE_ANON_KEY');
-  const authClient = createClient<Database>(getEnv('SUPABASE_URL'), anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { error } = await authClient.auth.resetPasswordForEmail(link.email, {
-    redirectTo,
-  });
-  if (error) {
-    console.error('FacilERP password recovery email failed.', { code: error.name });
-    throw new Error('Password recovery request failed.');
-  }
-  return { auth_user_id: link.auth_user_id, reset_requested: true };
+  throw new Error('Unsupported account management operation.');
 }
 
 Deno.serve(async (request: Request) => {
@@ -384,6 +239,12 @@ Deno.serve(async (request: Request) => {
       parsed = JSON.parse(rawBody);
     } catch {
       return jsonResponse(400, { error: 'invalid_request' });
+    }
+    if (
+      isRecord(parsed) &&
+      (parsed.action === 'invite' || parsed.action === 'reset')
+    ) {
+      return jsonResponse(503, { error: 'email_actions_unavailable' });
     }
     const payload = parseRequest(parsed);
     if (!payload) return jsonResponse(400, { error: 'invalid_request' });
