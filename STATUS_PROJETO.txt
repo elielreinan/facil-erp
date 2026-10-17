@@ -143,8 +143,8 @@ CONCLUÍDOS
 - Validadas as rotas /login e /patrimonio após a correção, com Tailwind,
   barra lateral e conteúdo carregando normalmente.
 
-PENDENTES
----------
+PENDENCIAS REGISTRADAS ANTES DO CRUD (HISTORICO)
+-----------------------------------------------
 - Tornar todos os dados do ERP CRUD (criar, consultar, editar e excluir),
   começando por orçamentos e documentos anexos e seguindo pelos demais
   módulos, com persistência real no Supabase.
@@ -192,8 +192,9 @@ PENDENTES
 - Rodapé do GFacilERP inclui "Codado por 2E" com link para https://instagram.com.
 - GFacilERP ainda precisa de Edge Functions/API server-side para criação,
   aprovação, bloqueio, redefinição de senha, delegação de setor e auditoria.
-- MFA obrigatório, rate limit, headers de segurança e revogação de sessões do
-  GFacilERP permanecem pendentes antes de produção.
+- MFA TOTP/AAL2, rate limit e headers de segurança do GFacilERP têm
+  implementação local; validação em staging, revogação de sessões e produção
+  permanecem pendentes.
 - Criado GFacilERP/STATUS_GFACILERP.txt com o histórico de mudanças, objetivos,
   pendências, regras de segurança e explicação da importância do GFacilERP para
   o FacilERP.
@@ -253,8 +254,10 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
   das operações dos módulos.
 - Adicionadas funções de autorização por setor e nível ao schema, reduzindo
   o uso de policies de escrita abertas.
-- Permanecem pendentes a edição e exclusão dos novos módulos, a persistência
-  completa de Orçamentos e o Storage privado para anexos.
+- Permanecem pendentes a edição e exclusão dos demais módulos e o Storage
+  privado para anexos. Orçamentos agora persiste itens previstos/realizados,
+  calcula o total previsto no banco e permite editar/excluir seus itens;
+  status/aprovacao do orçamento e validação em staging continuam pendentes.
 - O schema atualizado precisa ser aplicado no SQL Editor em banco novo ou
   convertido em migration controlada antes de atualizar um banco já utilizado;
   a coluna valor_previsto_total e as policies de autorização não são aplicadas
@@ -312,12 +315,14 @@ ATUALIZAÇÃO DE IMPLEMENTAÇÃO
 
 PENDÊNCIAS CONSOLIDADAS - 16/10/2026
 -------------------------------------
-- Aplicar o schema atualizado no projeto Supabase do FacilERP.
+- Confirmar backup restaurável nos dois projetos Supabase e reconciliar o
+  schema remoto com as migrations locais antes de qualquer db push.
+- Confirmar a versão do Postgres remoto e alinhar db.major_version nos dois
+  arquivos supabase/config.toml.
 - Criar Edge Functions/API privada do GFacilERP para criação, aprovação,
   bloqueio, desbloqueio, redefinição de senha, delegação de setor e auditoria.
-- Criar um projeto Supabase separado exclusivamente para o GFacilERP.
-- Executar GFacilERP/supabase/schema.sql nesse novo projeto.
-- Configurar o .env.local do GFacilERP somente com URL e chave pública anon.
+- Validar no Dashboard a conexão dos .env.local com os projetos esperados;
+  os Project IDs locais foram conferidos com o responsável.
 - Criar o primeiro administrador do GFacilERP e seu registro em
   public.administradores.
 - Implementar MFA, rate limit, revogação de sessões e headers de segurança.
@@ -330,11 +335,51 @@ PENDÊNCIAS CONSOLIDADAS - 16/10/2026
 - Criar exportações específicas por relatório.
 - Melhorar o mecanismo de atualização do aplicativo Windows.
 - Configurar Storage privado para anexos e políticas de acesso.
-- Criar auditoria automática para mutações do FacilERP.
+- Aplicar a migration local de auditoria automática somente após backup,
+  comparação com o schema remoto e validação em staging.
 - Definir e implementar a integração segura entre GFacilERP e FacilERP.
 - Corrigir vulnerabilidades de dependências com upgrade controlado.
 - Testar o instalador e periféricos em ambiente Windows real.
-- Integrar QR Code às consultas persistidas após as validações de banco.
+- QR fiscal conectado à conferência das notas persistidas; número/série e
+  competência extraídos da chave precisam corresponder ao lançamento.
+
+ATUALIZAÇÃO DE TESTES - 16/10/2026
+----------------------------------
+- Adicionados testes unitários isolados para o helper de perfil, cobrindo
+  ausência de sessão, carregamento do perfil e propagação de falhas de consulta.
+- Os testes usam mocks e dados fictícios; não acessam o Supabase nem exigem
+  credenciais.
+- Scanner atualizado para usar ZXing como leitor QR compatível com navegadores
+  Android, com seleção preferencial da câmera traseira, fallback por entrada
+  manual e mensagem explícita quando HTTPS não está disponível.
+- Navegação do FacilERP adaptada para telas estreitas, permitindo acesso aos
+  módulos em navegadores móveis sem a barra lateral desktop.
+- Inicializada a configuração local do Supabase CLI nos dois aplicativos,
+  com migrations versionadas e seeds desativados.
+- Preparada migration que registra mutações operacionais no banco de auditoria;
+  os eventos incluem snapshots antes/depois e exigem usuário autenticado.
+- Backups manuais de roles, schema e dados confirmados nos projetos FacilERP e
+  GFacilERP. Os arquivos permanecem em Documents/Supabase-Backups, fora do
+  repositorio; os dumps de dados não foram abertos nesta análise.
+- O schema dos backups foi comparado estruturalmente ao código. O FacilERP
+  remoto ainda não possui valor_previsto_total, orcamento_documentos, funções
+  de autorização nem policies de escrita; o GFacilERP ainda permite escrita
+  direta em usuarios_gerenciados.
+- Migrations aplicadas com sucesso em bancos locais descartáveis usando
+  Supabase CLI/PostgreSQL 17.11.
+- Backups manuais completos (roles, schema e dados) foram preservados fora do
+  repositorio para ambos projetos.
+- Project IDs e versao PostgreSQL 17.11 confirmados; baselines existentes
+  reconciliados no historico sem recriar tabelas.
+- FacilERP remoto atualizado com valor_previsto_total, orcamento_documentos,
+  funcoes/policies de autorizacao, grants restritos e 11 triggers de auditoria.
+- GFacilERP remoto atualizado para permitir apenas leitura direta de
+  usuarios_gerenciados pelo cliente autenticado; mutacoes ficam reservadas a
+  API/Edge Functions server-side.
+- Historicos remotos consultados e alinhados com migrations locais.
+- Confirmacao final por db push --dry-run falhou intermitentemente no
+  FacilERP por password authentication failed da role cli_login_postgres;
+  a consulta direta de schema e historico confirmou as migrations aplicadas.
 
 DIRETRIZ DE EVOLUÇÃO E INTEGRAÇÃO
 ---------------------------------
@@ -358,3 +403,124 @@ DIRETRIZ DE EVOLUÇÃO E INTEGRAÇÃO
   migração; não alterar contratos ativos silenciosamente.
 - Os READMEs e arquivos de status devem acompanhar decisões, endpoints,
   variáveis de ambiente, migrations e passos de atualização.
+
+ATUALIZACAO M2M - 16/10/2026
+----------------------------
+- Modelo escolhido: GFacilERP assina chamadas server-to-server com RSA; o
+  FacilERP valida emissor, audiencia, escopo, expiracao, hash do corpo e nonce.
+- Implementadas localmente a Edge Function receptora e uma migration com
+  perfis ativos, links de identidade e protecao contra replay.
+- Adicionada a rota `/redefinir-senha` para convites e recuperacao de senha.
+- A migration foi aplicada em Postgres local descartavel; 13 policies foram
+  confirmadas e um teste provou que perfil inativo nao le dados operacionais.
+- O receptor Edge compilou localmente; teste RSA rejeitou corpo adulterado e
+  replay. Nenhuma migration nova ou Edge Function foi publicada remotamente.
+- A service_role permanece apenas no ambiente server-side do respectivo
+  projeto.
+- O bloqueio imediato depende da aplicacao da migration: `ativo = false`
+  passa a ser exigido por policies restritivas em todas as tabelas operacionais.
+- Validacao local: builds dos dois aplicativos aprovados e 6 testes unitarios
+  aprovados; migrations do FacilERP aplicadas em Postgres local descartavel.
+
+ATUALIZACAO DE ORCAMENTOS - 16/10/2026
+--------------------------------------
+- Substituidos centros de custo ficticios por registros ativos do banco.
+- Tela de orcamentos passou a carregar itens previstos, itens realizados,
+  insumos e documentos persistidos; removeu anexos apenas em memoria e deixou
+  explicito que o upload depende do Storage privado.
+- Implementado CRUD de itens previstos e realizados, com confirmacao,
+  validacao, mensagens de erro e atualizacao real do total previsto.
+- Migration `20261016230500_sync_budget_totals.sql` recalcula o total no
+  banco em insercao, edicao, exclusao e movimentacao de itens; testada junto
+  com os triggers existentes de auditoria, apenas localmente.
+- Novos testes de calculo monetario; build de producao passou e 9 testes
+  unitarios passaram. Nenhuma migration foi aplicada remotamente.
+
+ATUALIZACAO DE RLS - 16/10/2026
+-------------------------------
+- Leitura dos dados operacionais passou a ser limitada por setor no FacilERP:
+  Suprimentos, Orcamentos e TI leem seus modulos; centros de custo e insumos
+  necessarios continuam compartilhados; Diretoria, NV3 e admin mantem leitura
+  ampla; perfil inativo nao le dados.
+- Auditoria segue privada ao autor, com leitura gerencial para Diretoria,
+  NV3 e admin. Relatorios salvos seguem privados ao criador.
+- GFacilERP reforcou `is_admin()` com `search_path` fixo e execucao restrita;
+  escritas diretas por `authenticated` continuam revogadas e mutacoes seguem
+  server-side.
+- Migrations de RLS aplicadas somente aos Supabase locais. Matrizes SQL
+  transacionais passaram em ambos: setores, Diretoria, NV3, perfis/admin
+  inativos, grants e leitura. Nenhuma migration remota foi aplicada.
+
+ATUALIZACAO DE STATUS - 17/10/2026
+----------------------------------
+- CRUD operacional local concluido para centros de custo, insumos, fornecedores,
+  compras, notas fiscais, orcamentos e itens previstos/realizados, patrimonio
+  e consultas salvas de relatorios. Cadastros referenciados sao arquivados e
+  reativados para preservar historico; auditoria permanece append-only.
+- Orçamentos permitem criar, consultar, editar e excluir o registro pai e os
+  itens previstos e realizados; exclusao do pai foi verificada com cascata.
+- Consultas salvas de relatorios sao privadas por criador e exportam dados
+  atuais do banco em CSV.
+- Migration `20261016234800_complete_operational_crud.sql` aplicada apenas no
+  Supabase local. A matriz SQL verificou escrita por setor, setores sem acesso,
+  perfil inativo, arquivamento, atribuicao limitada a TI/Suprimentos e cascata.
+- `npm test -- --run`: 10 testes passaram; `npm run build`: sucesso nas 15
+  rotas; `git diff --check`: sucesso.
+- Percentual CRUD no roadmap atualizado para 100% no escopo de registros e
+  consultas salvas. O percentual geral passou de 70,04% para 73,72% (74%
+  arredondado), conforme os pesos e a memoria de calculo do roadmap.
+- Storage privado e upload/download/exclusao de XML/PDF estavam pendentes no
+  marco anterior e foram implementados localmente nesta atualizacao; backup,
+  staging e operacao remota continuam pendentes e fora do escopo dos 100% de
+  CRUD operacional.
+- Nenhuma migration remota foi aplicada nesta etapa.
+
+PENDENCIAS ATUAIS - 17/10/2026
+------------------------------
+- Preparar backup/restauracao dos objetos binarios e validar Storage em staging.
+- Validar em staging os fluxos CRUD e RLS; ate la, nao aplicar migrations
+  pendentes aos bancos remotos.
+- Testar integracao server-to-server, MFA, revogacao de sessoes e auditoria em
+  staging antes de qualquer deploy.
+- Testar camera, leitor USB, impressao de etiquetas e instalador em
+  equipamentos/maquinas reais.
+- Prosseguir com cobertura de testes, acessibilidade, atualizacao controlada
+  de dependencias e fluxo de releases.
+
+ATUALIZACAO - ORCAMENTOS E NOTAS FISCAIS - 17/10/2026
+-----------------------------------------------------
+- Fluxo de orcamentos validado localmente para ciclo do registro, itens
+  previstos e realizados (incluindo data), status, busca, centros arquivados,
+  exclusao em cascata e anexos privados.
+- A migration `20261017004000_validate_invoice_keys_and_budget_rounding.sql`
+  valida o digito verificador da chave fiscal também no banco e calcula o total
+  previsto arredondando cada item ao centavo, igual à interface.
+- Notas fiscais preenchem número/série a partir do QR, exigem coerência do
+  número, série e mês/ano com a chave, verificam duplicidade no app e no banco,
+  preservam centros arquivados em edições e permitem busca/CRUD/anexos privados.
+- Matriz SQL transacional passou com cenários de chave válida/inválida,
+  arredondamento, edição, movimentação e exclusão de itens de orçamento, além
+  dos testes anteriores de setores e Storage.
+- `npm test`: 16 testes passaram; `npm run build`: sucesso. Nenhuma alteração
+  foi aplicada aos bancos remotos.
+- Implementação funcional local de Orçamentos e Notas Fiscais: 100%. A
+  validação em staging, backup de arquivos e operação remota continuam fora
+  desta conclusão.
+
+ATUALIZACAO - STORAGE PRIVADO E QR - 17/10/2026
+------------------------------------------------
+- Criado bucket privado `erp-private-documents`, limite de 10 MiB e allowlist
+  PDF/XML, com policies por setor e vinculo a metadados persistidos.
+- Implementados metadados de anexos para notas fiscais e orcamentos, envio,
+  download e exclusao com tratamento de falhas parciais e auditoria sem nome
+  original nem caminho de Storage nos snapshots.
+- Notas fiscais fazem leitura de chave por QR, validacao do digito e deteccao
+  de duplicidade na interface e no banco. Patrimonio resolve o UUID lido
+  somente dentro dos registros acessiveis ao perfil.
+- Migration `20261017001000_private_document_storage.sql` consta aplicada no
+  historico local; matriz SQL de RLS/Storage passou em transacao com rollback.
+- `npm test`: 16 testes passaram; `npm run build`: sucesso; nenhuma migration
+  ou mudanca foi aplicada aos projetos Supabase remotos.
+- O roadmap geral passou de 73,72% para 81,72% (82% arredondado). O CRUD de
+  registros, orçamentos e notas fiscais está concluído localmente; deploy,
+  staging e backup de binários permanecem pendentes.

@@ -10,6 +10,7 @@ const modules = [
   ['boxes', 'Suprimentos', '/suprimentos'],
   ['package', 'Produtos', '/produtos'],
   ['building', 'Fornecedores', '/fornecedores'],
+  ['building', 'Centros de custo', '/centros-custo'],
   ['file', 'Notas fiscais', '/notas-fiscais'],
   ['chart', 'Orçamentos', '/orcamentos'],
   ['report', 'Relatórios', '/relatorios'],
@@ -65,7 +66,7 @@ export function ErpShell({ children, eyebrow, title }: {
 
   return (
     <main className={`min-h-screen bg-[#f5f7fb] text-slate-900 ${highContrast ? 'erp-high-contrast' : ''} ${compact ? 'erp-compact' : ''}`}>
-      <aside className="fixed inset-y-0 left-0 z-20 flex w-56 flex-col bg-[#102a43] text-white shadow-xl sm:w-64">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col bg-[#102a43] text-white shadow-xl sm:flex sm:w-64">
         <div className="border-b border-white/10 px-6 py-6">
           <p className="text-xs font-bold tracking-[0.22em] text-blue-300">FACIL ERP</p>
           <p className="mt-2 text-xs text-slate-300">Gestão integrada</p>
@@ -90,7 +91,19 @@ export function ErpShell({ children, eyebrow, title }: {
           </div>
         </div>
       </aside>
-      <div className="pl-56 sm:pl-64">
+      <div className="pl-0 sm:pl-64">
+        <nav aria-label="Navegação de módulos" className="flex gap-1 overflow-x-auto bg-[#102a43] px-3 py-2 text-white sm:hidden">
+          {modules.map(([, label, href]) => (
+            <Link
+              aria-current={pathname === href ? 'page' : undefined}
+              className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${pathname === href ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10'}`}
+              href={href}
+              key={href}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
         <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8">
           <div><p className="text-xs font-semibold uppercase tracking-widest text-blue-700">{eyebrow}</p><h1 className="mt-1 text-xl font-bold">{title}</h1></div>
           <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">Ambiente corporativo</span><div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">AD</div></div>

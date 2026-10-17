@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSafeText, isValidCnpj, maskCnpj, maskPhone, normalizeSearch } from '../lib/validation';
+import { isSafeText, isValidCnpj, isValidIsoDate, maskCnpj, maskPhone, normalizeSearch } from '../lib/validation';
 
 describe('validation helpers', () => {
   it('formats CNPJ and phone values', () => {
@@ -18,5 +18,12 @@ describe('validation helpers', () => {
     expect(isSafeText('<script>', 30)).toBe(false);
     expect(normalizeSearch('  produto  ')).toBe('produto');
     expect(normalizeSearch('x'.repeat(110))).toHaveLength(100);
+  });
+
+  it('validates calendar dates without accepting normalized invalid dates', () => {
+    expect(isValidIsoDate('2024-02-29')).toBe(true);
+    expect(isValidIsoDate('2025-02-29')).toBe(false);
+    expect(isValidIsoDate('2025-13-01')).toBe(false);
+    expect(isValidIsoDate('2025-2-01')).toBe(false);
   });
 });

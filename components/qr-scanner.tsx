@@ -1,18 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-
-type BarcodeDetectorResult = { rawValue: string };
-type BarcodeDetectorLike = {
-  detect: (source: HTMLVideoElement) => Promise<BarcodeDetectorResult[]>;
-};
-type BarcodeDetectorConstructor = new (options?: { formats: string[] }) => BarcodeDetectorLike;
-
-declare global {
-  interface Window {
-    BarcodeDetector?: BarcodeDetectorConstructor;
-  }
-}
+import type { IScannerControls } from '@zxing/browser';
 
 export function QrScanner({ onDetected, onClose, title = 'Ler código QR', description = 'A leitura não salva alterações automaticamente.' }: {
   onDetected: (value: string) => void;
@@ -21,57 +10,58 @@ export function QrScanner({ onDetected, onClose, title = 'Ler código QR', descr
   description?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanTimerRef = useRef<number | null>(null);
+  const onDetectedRef = useRef(onDetected);
+  const controlsRef = useRef<IScannerControls | null>(null);
   const [manualValue, setManualValue] = useState('');
   const [cameraError, setCameraError] = useState('');
   const [isStarting, setIsStarting] = useState(true);
 
   useEffect(() => {
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
+
+  useEffect(() => {
     let active = true;
 
     async function startCamera() {
+      if (!window.isSecureContext) {
+        setCameraError('A câmera exige uma conexão HTTPS segura. Abra o sistema pelo endereço publicado ou use a entrada manual.');
+        setIsStarting(false);
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setCameraError('A câmera não está disponível neste ambiente. Use a entrada manual.');
         setIsStarting(false);
         return;
       }
-      if (!window.BarcodeDetector) {
-        setCameraError('A leitura automática não é compatível com este ambiente. Use a entrada manual.');
-        setIsStarting(false);
-        return;
-      }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: { ideal: 'environment' } },
+        if (!videoRef.current) return;
+        const { BrowserQRCodeReader } = await import('@zxing/browser');
+        const reader = new BrowserQRCodeReader(undefined, {
+          delayBetweenScanAttempts: 250,
+          delayBetweenScanSuccess: 1000,
         });
+        const controls = await reader.decodeFromConstraints(
+          {
+            audio: false,
+            video: { facingMode: { ideal: 'environment' } },
+          },
+          videoRef.current,
+          (result) => {
+            const value = result?.getText().trim();
+            if (!active || !value) return;
+            active = false;
+            controlsRef.current?.stop();
+            onDetectedRef.current(value);
+          },
+        );
         if (!active) {
-          stream.getTracks().forEach((track) => track.stop());
+          controls.stop();
           return;
         }
-        streamRef.current = stream;
-        if (!videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        controlsRef.current = controls;
         setIsStarting(false);
-        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-        const scan = async () => {
-          if (!active || !videoRef.current || videoRef.current.readyState < 2) return;
-          try {
-            const results = await detector.detect(videoRef.current);
-            const value = results.find((result) => result.rawValue.trim())?.rawValue.trim();
-            if (value) {
-              onDetected(value);
-              return;
-            }
-          } catch (error) {
-            console.error('Falha ao ler QR Code:', error);
-          }
-          scanTimerRef.current = window.setTimeout(() => void scan(), 350);
-        };
-        void scan();
       } catch (error) {
         console.error('Falha ao iniciar câmera:', error);
         setCameraError('Não foi possível acessar a câmera. Verifique a permissão ou use a entrada manual.');
@@ -82,11 +72,10 @@ export function QrScanner({ onDetected, onClose, title = 'Ler código QR', descr
     void startCamera();
     return () => {
       active = false;
-      if (scanTimerRef.current !== null) window.clearTimeout(scanTimerRef.current);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+      controlsRef.current?.stop();
+      controlsRef.current = null;
     };
-  }, [onDetected]);
+  }, []);
 
   function handleManualSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,6 +95,7 @@ export function QrScanner({ onDetected, onClose, title = 'Ler código QR', descr
       <div className="mt-4 overflow-hidden rounded-lg bg-slate-900">
         <video aria-label="Pré-visualização da câmera para leitura do QR Code" className="aspect-video w-full object-cover" muted playsInline ref={videoRef} />
       </div>
+      <p className="mt-2 text-xs text-slate-500">Em celulares, a leitura usa a câmera traseira quando disponível e exige acesso pelo endereço HTTPS do sistema.</p>
       {isStarting && <p className="mt-3 text-sm text-slate-600">Solicitando acesso à câmera...</p>}
       {cameraError && <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-800" role="alert">{cameraError}</p>}
       <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={handleManualSubmit}>

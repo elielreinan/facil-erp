@@ -20,11 +20,13 @@ export default function ProdutosPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [status, setStatus] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   async function loadProducts() {
     try {
@@ -41,7 +43,7 @@ export default function ProdutosPage() {
 
   useEffect(() => { void loadProducts(); }, []);
 
-  const filteredProducts = useMemo(() => products.filter((product) => `${product.codigo ?? ''} ${product.nome} ${product.categoria}`.toLowerCase().includes(normalizeSearch(search).toLowerCase()) && (!category || product.categoria === category)), [products, search, category]);
+  const filteredProducts = useMemo(() => products.filter((product) => `${product.codigo ?? ''} ${product.nome} ${product.categoria}`.toLowerCase().includes(normalizeSearch(search).toLowerCase()) && (!category || product.categoria === category) && (!status || (status === 'ativo' ? product.ativo : !product.ativo))), [products, search, category, status]);
 
   function openForm(product?: Product) {
     setEditing(product ?? null);
@@ -66,6 +68,7 @@ export default function ProdutosPage() {
     }
     const action = editing ? 'alteração' : 'criação';
     if (!window.confirm(`Confirmar ${action} do produto "${payload.nome}"?`)) return;
+    setSaving(true);
     try {
       const client = getSupabaseClient();
       const result = editing ? await client.from('insumos').update(payload).eq('id', editing.id) : await client.from('insumos').insert(payload);
@@ -78,19 +81,28 @@ export default function ProdutosPage() {
     } catch (queryError) {
       console.error('Falha ao salvar produto:', queryError);
       setError('Não foi possível salvar o produto.');
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function removeProduct(product: Product) {
-    if (!window.confirm(`Confirmar exclusão do produto "${product.nome}"?`)) return;
-    const { error: queryError } = await getSupabaseClient().from('insumos').delete().eq('id', product.id);
-    if (queryError) {
-      console.error('Falha ao excluir produto:', queryError);
-      setError('Não foi possível excluir o produto.');
-      return;
+  async function toggleProduct(product: Product) {
+    const nextActive = !product.ativo;
+    if (!window.confirm(`Confirmar ${nextActive ? 'reativação' : 'inativação'} do produto "${product.nome}"?`)) return;
+    setSaving(true);
+    try {
+      const { data, error: queryError } = await getSupabaseClient().from('insumos')
+        .update({ ativo: nextActive }).eq('id', product.id).select('id').maybeSingle();
+      if (queryError) throw queryError;
+      if (!data) throw new Error('The product status was not updated.');
+      setMessage(`Produto ${nextActive ? 'reativado' : 'inativado'} com sucesso.`);
+      await loadProducts();
+    } catch (caughtError) {
+      console.error('Falha ao alterar status do produto:', caughtError);
+      setError('Não foi possível alterar o status do produto.');
+    } finally {
+      setSaving(false);
     }
-    setMessage('Produto excluído com sucesso.');
-    await loadProducts();
   }
 
   return <ErpShell eyebrow="Cadastros" title="Produtos e insumos">
@@ -98,9 +110,9 @@ export default function ProdutosPage() {
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold">Catálogo de materiais</h2><p className="mt-1 text-sm text-slate-500">Dados carregados do Supabase.</p></div><button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white" onClick={() => openForm()} type="button">{isFormOpen ? 'Fechar formulário' : 'Novo produto'}</button></div>
       {message && <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{message}</p>}
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</p>}
-      {isFormOpen && <form className="mt-5 grid gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 sm:grid-cols-2" onSubmit={handleSubmit}><input defaultValue={editing?.codigo ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm uppercase" maxLength={40} name="code" placeholder="Código" required /><input defaultValue={editing?.nome ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm" maxLength={120} name="name" placeholder="Nome" required /><input defaultValue={editing?.categoria ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm" name="category" placeholder="Categoria" required /><input defaultValue={editing?.unidade_medida ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm" name="unit" placeholder="Unidade de medida" required /><input defaultValue={editing?.estoque_minimo ?? 0} className="rounded border border-slate-300 px-3 py-2 text-sm" min="0" name="minimumStock" placeholder="Estoque mínimo" required step="0.001" type="number" /><button className="rounded bg-blue-700 px-4 py-2 text-sm font-bold text-white sm:col-span-2" type="submit">{editing ? 'Salvar alteração' : 'Criar produto'}</button></form>}
-      <SearchFilters onSearchChange={setSearch} placeholder="Código, produto ou categoria" search={search} filters={[{ label: 'Categoria', value: category, options: Array.from(new Set(products.map((product) => product.categoria))), onChange: setCategory }]} />
-      <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b text-xs uppercase text-slate-400"><tr><th className="pb-3">Código</th><th className="pb-3">Produto</th><th className="pb-3">Categoria</th><th className="pb-3">Unidade</th><th className="pb-3">Estoque mínimo</th><th className="pb-3">Ações</th></tr></thead><tbody className="divide-y divide-slate-100">{!loading && filteredProducts.map((product) => <tr key={product.id}><td className="py-4 text-slate-600">{product.codigo}</td><th className="py-4 font-semibold text-slate-800">{product.nome}</th><td className="py-4 text-slate-600">{product.categoria}</td><td className="py-4 text-slate-600">{product.unidade_medida}</td><td className="py-4 text-slate-600">{product.estoque_minimo}</td><td className="py-4"><button className="mr-3 font-semibold text-blue-700" onClick={() => openForm(product)} type="button">Editar</button><button className="font-semibold text-red-700" onClick={() => void removeProduct(product)} type="button">Excluir</button></td></tr>)}</tbody></table>{loading && <p className="py-8 text-center text-sm text-slate-500">Carregando produtos...</p>}{!loading && filteredProducts.length === 0 && <p className="py-8 text-center text-sm text-slate-500">Nenhum produto cadastrado.</p>}</div>
+      {isFormOpen && <form className="mt-5 grid gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 sm:grid-cols-2" onSubmit={handleSubmit}><input defaultValue={editing?.codigo ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm uppercase" maxLength={40} name="code" placeholder="Código" required /><input defaultValue={editing?.nome ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm" maxLength={120} name="name" placeholder="Nome" required /><input defaultValue={editing?.categoria ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm" name="category" placeholder="Categoria" required /><input defaultValue={editing?.unidade_medida ?? ''} className="rounded border border-slate-300 px-3 py-2 text-sm" name="unit" placeholder="Unidade de medida" required /><input defaultValue={editing?.estoque_minimo ?? 0} className="rounded border border-slate-300 px-3 py-2 text-sm" min="0" name="minimumStock" placeholder="Estoque mínimo" required step="0.001" type="number" /><button className="rounded bg-blue-700 px-4 py-2 text-sm font-bold text-white sm:col-span-2" disabled={saving} type="submit">{saving ? 'Salvando...' : editing ? 'Salvar alteração' : 'Criar produto'}</button></form>}
+      <SearchFilters onSearchChange={setSearch} placeholder="Código, produto ou categoria" search={search} filters={[{ label: 'Categoria', value: category, options: Array.from(new Set(products.map((product) => product.categoria))), onChange: setCategory }, { label: 'Status', value: status, options: ['ativo', 'inativo'], onChange: setStatus }]} />
+      <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="border-b text-xs uppercase text-slate-400"><tr><th className="pb-3">Código</th><th className="pb-3">Produto</th><th className="pb-3">Categoria</th><th className="pb-3">Unidade</th><th className="pb-3">Estoque mínimo</th><th className="pb-3">Status</th><th className="pb-3">Ações</th></tr></thead><tbody className="divide-y divide-slate-100">{!loading && filteredProducts.map((product) => <tr key={product.id}><td className="py-4 text-slate-600">{product.codigo}</td><th className="py-4 font-semibold text-slate-800">{product.nome}</th><td className="py-4 text-slate-600">{product.categoria}</td><td className="py-4 text-slate-600">{product.unidade_medida}</td><td className="py-4 text-slate-600">{product.estoque_minimo}</td><td className="py-4">{product.ativo ? 'Ativo' : 'Inativo'}</td><td className="py-4"><button className="mr-3 font-semibold text-blue-700" disabled={saving} onClick={() => openForm(product)} type="button">Editar</button><button className="font-semibold text-slate-700" disabled={saving} onClick={() => void toggleProduct(product)} type="button">{product.ativo ? 'Inativar' : 'Reativar'}</button></td></tr>)}</tbody></table>{loading && <p className="py-8 text-center text-sm text-slate-500">Carregando produtos...</p>}{!loading && filteredProducts.length === 0 && <p className="py-8 text-center text-sm text-slate-500">Nenhum produto cadastrado.</p>}</div>
     </section>
   </ErpShell>;
 }
