@@ -8,10 +8,12 @@ const ALLOWED_SECTORS = new Set(['suprimentos', 'orcamentos', 'ti', 'diretoria']
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type RequestPayload =
+  | { action: 'invite'; managed_user_id: string; nome: string; email: string; setor: string }
+  | { action: 'reset'; managed_user_id: string; auth_user_id: string; email: string }
   | { action: 'set_status'; managed_user_id: string; auth_user_id: string; status: 'aprovado' | 'bloqueado' }
   | { action: 'set_sector'; managed_user_id: string; auth_user_id: string; setor: string };
 
-type IdentityLink = { managed_user_id: string; auth_user_id: string };
+type IdentityLink = { managed_user_id: string; auth_user_id: string; email: string };
 type Table<Row, Insert, Update = Partial<Insert>> = {
   Row: Row;
   Insert: Insert;
@@ -36,7 +38,7 @@ type Database = {
           email: string;
           setor: string;
           nivel: string;
-          ativo?: boolean;
+          ativo: boolean;
         }
       >;
       gfac_user_links: Table<
@@ -90,7 +92,40 @@ function getEnv(name: string): string {
 function parseRequest(value: unknown): RequestPayload | null {
   if (!isRecord(value) || !isUuid(value.managed_user_id) || typeof value.action !== 'string') return null;
 
+  if (value.action === 'invite') {
+    if (
+      typeof value.nome !== 'string' ||
+      value.nome.trim().length < 2 ||
+      value.nome.trim().length > 150 ||
+      typeof value.email !== 'string' ||
+      value.email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email.trim()) ||
+      typeof value.setor !== 'string' ||
+      !ALLOWED_SECTORS.has(value.setor)
+    ) return null;
+    return {
+      action: 'invite',
+      managed_user_id: value.managed_user_id,
+      nome: value.nome.trim(),
+      email: value.email.trim().toLowerCase(),
+      setor: value.setor,
+    };
+  }
+
   if (!isUuid(value.auth_user_id)) return null;
+  if (value.action === 'reset') {
+    if (
+      typeof value.email !== 'string' ||
+      value.email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email.trim())
+    ) return null;
+    return {
+      action: 'reset',
+      managed_user_id: value.managed_user_id,
+      auth_user_id: value.auth_user_id,
+      email: value.email.trim().toLowerCase(),
+    };
+  }
   if (value.action === 'set_status') {
     if (value.status !== 'aprovado' && value.status !== 'bloqueado') return null;
     return {
@@ -134,7 +169,7 @@ async function getIdentityLink(
 ): Promise<IdentityLink | null> {
   const { data, error } = await client
     .from('gfac_user_links')
-    .select('managed_user_id,auth_user_id')
+    .select('managed_user_id,auth_user_id,email')
     .eq('managed_user_id', managedUserId)
     .maybeSingle();
   if (error) {
@@ -158,6 +193,71 @@ async function applyOperation(
   client: ServiceClient,
   payload: RequestPayload,
 ): Promise<Record<string, unknown>> {
+  if (payload.action === 'invite') {
+    const existingLink = await getIdentityLink(client, payload.managed_user_id);
+    if (existingLink) {
+      if (existingLink.email.toLowerCase() !== payload.email) {
+        throw new Error('Managed user email does not match the existing identity.');
+      }
+      return { auth_user_id: existingLink.auth_user_id };
+    }
+
+    const { data: inviteData, error: inviteError } = await client.auth.admin.inviteUserByEmail(
+      payload.email,
+      { data: { nome: payload.nome, setor: payload.setor } },
+    );
+    if (inviteError || !inviteData.user) {
+      console.error('Failed to invite the FacilERP account.', { code: inviteError?.name });
+      throw new Error('Auth invitation failed.');
+    }
+
+    const authUserId = inviteData.user.id;
+    try {
+      const { error: profileError } = await client.from('perfis').insert({
+        id: authUserId,
+        nome: payload.nome,
+        email: payload.email,
+        setor: payload.setor,
+        nivel: 'NV1',
+        ativo: false,
+      });
+      if (profileError) {
+        console.error('Failed to create the invited FacilERP profile.', { code: profileError.code });
+        throw new Error('Profile creation failed.');
+      }
+      const { error: linkError } = await client.from('gfac_user_links').insert({
+        managed_user_id: payload.managed_user_id,
+        auth_user_id: authUserId,
+        email: payload.email,
+      });
+      if (linkError) {
+        console.error('Failed to link the invited FacilERP identity.', { code: linkError.code });
+        throw new Error('Identity link creation failed.');
+      }
+    } catch (error) {
+      const { error: rollbackError } = await client.auth.admin.deleteUser(authUserId);
+      if (rollbackError) {
+        console.error('Failed to roll back an incomplete invitation.', {
+          code: rollbackError.name,
+        });
+        throw new Error('Invitation reconciliation is required.');
+      }
+      throw error;
+    }
+    return { auth_user_id: authUserId };
+  }
+
+  if (payload.action === 'reset') {
+    const link = await requireIdentityLink(client, payload.managed_user_id, payload.auth_user_id);
+    if (link.email.toLowerCase() !== payload.email) throw new Error('Identity email mismatch.');
+    const { error } = await client.auth.resetPasswordForEmail(payload.email);
+    if (error) {
+      console.error('Failed to send a FacilERP password-reset code.', { code: error.name });
+      throw new Error('Password-reset email failed.');
+    }
+    return { auth_user_id: payload.auth_user_id };
+  }
+
   const link = await requireIdentityLink(client, payload.managed_user_id, payload.auth_user_id);
   if (payload.action === 'set_status') {
     const active = payload.status === 'aprovado';
@@ -239,12 +339,6 @@ Deno.serve(async (request: Request) => {
       parsed = JSON.parse(rawBody);
     } catch {
       return jsonResponse(400, { error: 'invalid_request' });
-    }
-    if (
-      isRecord(parsed) &&
-      (parsed.action === 'invite' || parsed.action === 'reset')
-    ) {
-      return jsonResponse(503, { error: 'email_actions_unavailable' });
     }
     const payload = parseRequest(parsed);
     if (!payload) return jsonResponse(400, { error: 'invalid_request' });

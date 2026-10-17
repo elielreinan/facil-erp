@@ -1,6 +1,6 @@
 [package]
 name = "facilerp"
-version = "0.1.5"
+version = "0.1.6"
 description = "FacilERP desktop application"
 authors = ["FacilERP"]
 edition = "2021"
