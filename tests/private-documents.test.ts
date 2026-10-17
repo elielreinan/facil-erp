@@ -18,12 +18,21 @@ const assetId = '80000000-0000-4000-8000-000000000001';
 
 describe('private document and QR helpers', () => {
   it('extracts only a 44-digit invoice key from supported QR formats', () => {
-    expect(extractInvoiceAccessKey(accessKey)).toBe(accessKey);
-    expect(extractInvoiceAccessKey(`https://example.test/nf?p=${accessKey}|2|1`)).toBe(accessKey);
-    expect(extractInvoiceAccessKey(`chNFe=${accessKey}`)).toBe(accessKey);
+    const supportedQrContents = [
+      accessKey,
+      `https://www.nfe.fazenda.gov.br/consulta?chNFe=${accessKey}`,
+      `https://www.sefaz.rs.gov.br/NFCE/QRCode?p=${accessKey}|2|1|1|`,
+      `chNFe=${accessKey}`,
+      `chave=${accessKey}`,
+    ];
+    supportedQrContents.forEach((content) => {
+      expect(extractInvoiceAccessKey(content)).toBe(accessKey);
+    });
     expect(isValidInvoiceAccessKey(accessKey)).toBe(true);
     expect(isValidInvoiceAccessKey(`${accessKey.slice(0, 43)}1`)).toBe(false);
     expect(extractInvoiceAccessKey('https://example.test/?token=secret')).toBeNull();
+    expect(extractInvoiceAccessKey(`https://example.test/?token=${accessKey}`)).toBeNull();
+    expect(extractInvoiceAccessKey(`https://example.test/?chNFe=${accessKey.slice(0, 43)}1`)).toBeNull();
     expect(getInvoiceAccessKeyDetails(accessKey)).toEqual({
       number: '1',
       series: '1',

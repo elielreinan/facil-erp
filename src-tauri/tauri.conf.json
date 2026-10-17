@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PROJ PARA FACILITAS",
+  "productName": "FacilERP",
   "version": "0.1.5",
   "identifier": "br.com.facilitas.facilerp",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "PROJ PARA FACILITAS",
+        "title": "FacilERP",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
