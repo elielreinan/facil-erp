@@ -27,6 +27,12 @@ function decodeKey(value: string): Uint8Array {
   return Uint8Array.from(atob(value.trim()), (character) => character.charCodeAt(0));
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 export async function sha256Hex(value: string): Promise<string> {
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
   return [...digest].map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -38,7 +44,7 @@ export async function signM2MToken(
 ): Promise<string> {
   const key = await crypto.subtle.importKey(
     'pkcs8',
-    decodeKey(privateKeyBase64),
+    toArrayBuffer(decodeKey(privateKeyBase64)),
     { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
     false,
     ['sign'],
@@ -97,7 +103,7 @@ export async function verifyM2MToken(
   try {
     const key = await crypto.subtle.importKey(
       'spki',
-      decodeKey(publicKeyBase64),
+      toArrayBuffer(decodeKey(publicKeyBase64)),
       { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
       false,
       ['verify'],
@@ -105,7 +111,7 @@ export async function verifyM2MToken(
     const valid = await crypto.subtle.verify(
       'RSASSA-PKCS1-v1_5',
       key,
-      base64UrlDecode(parts[2]),
+      toArrayBuffer(base64UrlDecode(parts[2])),
       encoder.encode(`${parts[0]}.${parts[1]}`),
     );
     return valid ? (parsed as M2MClaims) : null;

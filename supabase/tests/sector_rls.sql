@@ -92,6 +92,17 @@ insert into public.nota_fiscal_documentos (
   10,
   '00000000-0000-4000-8000-000000000001'
 );
+insert into public.patrimonio_documentos (
+  id, patrimonio_ativo_id, nome_arquivo, caminho_storage, tipo_mime, tamanho_bytes, criado_por
+) values (
+  'd0000000-0000-4000-8000-000000000001',
+  '80000000-0000-4000-8000-000000000001',
+  'rls-asset.pdf',
+  'patrimonio/80000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000003/d0000000-0000-4000-8000-000000000001.pdf',
+  'application/pdf',
+  10,
+  '00000000-0000-4000-8000-000000000003'
+);
 insert into storage.objects (bucket_id, name, owner, metadata)
 values
   (
@@ -104,6 +115,12 @@ values
     'erp-private-documents',
     'notas-fiscais/90000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000001/c0000000-0000-4000-8000-000000000001-rls-invoice.pdf',
     '00000000-0000-4000-8000-000000000001',
+    '{"mimetype":"application/pdf","size":10}'
+  ),
+  (
+    'erp-private-documents',
+    'patrimonio/80000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000003/d0000000-0000-4000-8000-000000000001.pdf',
+    '00000000-0000-4000-8000-000000000003',
     '{"mimetype":"application/pdf","size":10}'
   );
 
@@ -172,6 +189,18 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+  begin
+    insert into storage.objects (bucket_id, name, owner, metadata)
+    values (
+      'erp-private-documents',
+      'patrimonio/80000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000001/denied.pdf',
+      auth.uid(),
+      '{"mimetype":"application/pdf","size":10}'
+    );
+    raise exception 'suprimentos unexpectedly uploaded a private asset document';
+  exception when insufficient_privilege then
+    null;
+  end;
   insert into storage.objects (bucket_id, name, owner, metadata)
   values (
     'erp-private-documents',
@@ -180,7 +209,16 @@ begin
     '{"mimetype":"application/pdf","size":10}'
   );
 
-  if (select count(*) from public.list_active_profile_assignments()) <> 5
+  if (
+      select count(*) from public.list_active_profile_assignments()
+      where id in (
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-000000000003',
+        '00000000-0000-4000-8000-000000000004',
+        '00000000-0000-4000-8000-000000000006'
+      )
+    ) <> 5
     or exists (
       select 1 from public.list_active_profile_assignments()
       where id = '00000000-0000-4000-8000-000000000005'
@@ -294,6 +332,9 @@ begin
     or (select count(*) from public.insumos) <> 1
     or (select count(*) from public.centros_custo) <> 1 then
     raise exception 'orcamentos read policy regression';
+  end if;
+  if (select count(*) from public.patrimonio_documentos) <> 0 then
+    raise exception 'orcamentos can read another sector private documents';
   end if;
   if (select count(*) from public.orcamento_documentos) <> 1
     or (select count(*) from public.nota_fiscal_documentos) <> 0
@@ -415,9 +456,46 @@ begin
     or (select count(*) from public.insumos) <> 0 then
     raise exception 'TI read policy regression';
   end if;
-  if (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 0 then
+  if (select count(*) from public.patrimonio_documentos) <> 1
+    or (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 1 then
     raise exception 'TI can read private documents from other sectors';
   end if;
+  begin
+    insert into public.patrimonio_documentos (
+      patrimonio_ativo_id, nome_arquivo, caminho_storage, tipo_mime, tamanho_bytes, criado_por
+    ) values (
+      '80000000-0000-4000-8000-000000000001',
+      'invalid-owner.pdf',
+      'patrimonio/80000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000001/e0000000-0000-4000-8000-000000000001.pdf',
+      'application/pdf',
+      10,
+      '00000000-0000-4000-8000-000000000001'
+    );
+    raise exception 'TI unexpectedly created metadata for another profile';
+  exception when insufficient_privilege then
+    null;
+  end;
+  insert into storage.objects (bucket_id, name, owner, metadata)
+  values (
+    'erp-private-documents',
+    'patrimonio/80000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000003/e0000000-0000-4000-8000-000000000001.pdf',
+    auth.uid(),
+    '{"mimetype":"application/pdf","size":10}'
+  );
+  insert into public.patrimonio_documentos (
+    id, patrimonio_ativo_id, nome_arquivo, caminho_storage, tipo_mime, tamanho_bytes, criado_por
+  ) values (
+    'e0000000-0000-4000-8000-000000000001',
+    '80000000-0000-4000-8000-000000000001',
+    'asset-crud.pdf',
+    'patrimonio/80000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000003/e0000000-0000-4000-8000-000000000001.pdf',
+    'application/pdf',
+    10,
+    auth.uid()
+  );
+  delete from public.patrimonio_documentos
+  where id = 'e0000000-0000-4000-8000-000000000001';
+  if not found then raise exception 'TI could not delete asset document metadata'; end if;
   insert into public.patrimonio_ativos (
     nome_item, tipo, numero_serie, data_aquisicao, criado_por
   ) values (
@@ -453,7 +531,7 @@ begin
   if (select count(*) from public.relatorios_salvos) <> 0 then
     raise exception 'directoria can read another user saved report';
   end if;
-  if (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 2 then
+  if (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 3 then
     raise exception 'directoria cannot read authorized private documents';
   end if;
   begin
@@ -482,7 +560,7 @@ begin
     or (select count(*) from public.auditoria_eventos) < 2 then
     raise exception 'NV3 broad read policy regression';
   end if;
-  if (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 2 then
+  if (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 3 then
     raise exception 'NV3 cannot read authorized private documents';
   end if;
 end;

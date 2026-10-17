@@ -524,3 +524,48 @@ ATUALIZACAO - STORAGE PRIVADO E QR - 17/10/2026
 - O roadmap geral passou de 73,72% para 81,72% (82% arredondado). O CRUD de
   registros, orçamentos e notas fiscais está concluído localmente; deploy,
   staging e backup de binários permanecem pendentes.
+
+ATUALIZACAO - PATRIMONIO, STORAGE E AUTENTICACAO - 17/10/2026
+-------------------------------------------------------------
+- Corrigido o ciclo QR do patrimônio: etiquetas `facilerp://patrimonio/<UUID>`
+  agora são reconhecidas pelo leitor e continuam resolvendo somente ativos
+  visíveis sob RLS.
+- Patrimônio passou a aceitar anexos privados PDF/XML. A migration
+  `20261017005000_add_asset_private_documents.sql` adiciona metadados, limite
+  de tamanho, auditoria e policies por setor; a exclusão do ativo remove
+  primeiro os bytes e restaura-os se a persistência do registro falhar.
+- `npm test`: 20 testes passaram. A matriz SQL de TI, Suprimentos, Diretoria,
+  NV3 e perfil inativo passou com a nova tabela e Storage local. Teste pela API
+  local comprovou upload/download de bytes, negação entre setores e exclusão.
+- Criados `storage:backup` e `storage:restore`: manifesto com SHA-256, validação
+  de caminho/MIME/conteúdo, sem sobrescrita, reversão de uploads parciais e
+  exigência de confirmação explícita para restauração entre projetos. Um
+  backup e restauração locais recuperaram bytes idênticos.
+- FacilERP oferece recuperação de senha sem enumeração de e-mail; o reset
+  exige senha de 12–128 caracteres com minúscula, maiúscula, número e símbolo.
+  Ambos os `config.toml` locais também impõem essa política no servidor.
+- GFacilERP permite sair localmente ou revogar sessões globais. TOTP está
+  habilitado no Supabase local; teste Auth real confirmou senha fraca rejeitada,
+  AAL1 -> AAL2, fator persistido e refresh tokens de outras sessões revogados.
+- E-mail de recuperação local foi recebido pelo Mailpit; o link retornou a
+  `/redefinir-senha`, a senha foi alterada e a anterior deixou de autenticar.
+- Patrimônio/QR, Storage/anexos e autenticação: 100% de implementação e
+  validação funcional local. Permissões de câmera em Android, configurações e
+  secrets remotos, SMTP real, rotina de backup/retenção e ensaio de restauração
+  em staging continuam pendentes. Nenhum banco ou serviço remoto foi alterado.
+
+CORRECAO E TESTE DO SCANNER DE PATRIMONIO - 17/10/2026
+------------------------------------------------------
+- A listagem de ativos agora atualiza os registros mesmo quando uma consulta
+  auxiliar de responsáveis, centros de custo ou anexos falha. A falha continua
+  registrada no console e a interface mostra um aviso, sem ocultar os ativos.
+- Para testar a camera em Android: abrir a versao hospedada em HTTPS, entrar
+  com perfil TI ou NV3, abrir Patrimonio e permitir o uso da camera em "Ler
+  etiqueta QR". Escanear a etiqueta gerada pelo botao "Etiqueta" em outro
+  dispositivo/tela ou impressa. Manter busca vazia e filtro de status limpo;
+  o resultado deve oferecer "Abrir ativo encontrado".
+- A camera nao fica disponivel por HTTP usando o IP do computador na rede
+  local. Se ainda nao houver endereco HTTPS de staging/publicacao, o teste
+  fisico permanece pendente; a entrada manual da etiqueta
+  `facilerp://patrimonio/<UUID>` permite verificar a resolucao sem testar a
+  camera. Nenhum deploy foi realizado nesta etapa.

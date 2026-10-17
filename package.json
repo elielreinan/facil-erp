@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "storage:backup": "node scripts/private-storage-backup.mjs backup",
+    "storage:restore": "node scripts/private-storage-backup.mjs restore",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -16,21 +18,26 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "@zxing/browser": "^0.2.1",
-    "next": "^14.2.15",
+    "next": "^15.5.24",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^20.16.10",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.28",
+    "postcss": "^8.5.30",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.6.3",
-    "vitest": "^2.1.9"
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }

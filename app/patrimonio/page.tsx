@@ -3,10 +3,20 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { AssetLabel } from '../../components/asset-label';
 import { ErpShell } from '../../components/erp-shell';
+import { PrivateDocumentPanel } from '../../components/private-document-panel';
 import { QrScanner } from '../../components/qr-scanner';
 import { SearchFilters } from '../../components/search-filters';
 import { getCurrentProfile } from '../../lib/current-profile';
-import { extractAssetId } from '../../lib/private-documents';
+import {
+  createPrivateDocumentPath,
+  deletePrivateDocumentBatch,
+  extractAssetId,
+  hasValidDocumentSignature,
+  PRIVATE_DOCUMENT_BUCKET,
+  type AssetDocumentMetadata,
+  uploadPrivateDocument,
+  validatePrivateDocument,
+} from '../../lib/private-documents';
 import { isSafeText, isValidIsoDate, normalizeSearch } from '../../lib/validation';
 
 type AssetStatus = 'disponivel' | 'alocado' | 'manutencao';
@@ -31,6 +41,7 @@ const statuses: Array<{ value: AssetStatus; label: string }> = [
 
 export default function PatrimonioPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [documents, setDocuments] = useState<AssetDocumentMetadata[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [centers, setCenters] = useState<CostCenter[]>([]);
   const [search, setSearch] = useState('');
@@ -40,6 +51,7 @@ export default function PatrimonioPage() {
   const [lastScan, setLastScan] = useState('');
   const [scannedAsset, setScannedAsset] = useState<Asset | null>(null);
   const [labelAsset, setLabelAsset] = useState<Asset | null>(null);
+  const [documentsAssetId, setDocumentsAssetId] = useState<string | null>(null);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -50,19 +62,45 @@ export default function PatrimonioPage() {
     try {
       const { supabase, profile } = await getCurrentProfile();
       if (!profile) { window.location.replace('/login'); return; }
-      const [assetResult, profileResult, centerResult] = await Promise.all([
+      const [assetResult, profileResult, centerResult, documentResult] = await Promise.all([
         supabase.from('patrimonio_ativos')
           .select('id,nome_item,tipo,numero_serie,status,data_aquisicao,responsavel_perfil_id,centro_custo_id')
           .order('nome_item'),
         supabase.rpc('list_active_profile_assignments'),
         supabase.from('centros_custo').select('id,codigo,nome').eq('ativo', true).order('nome'),
+        supabase.from('patrimonio_documentos')
+          .select('id,patrimonio_ativo_id,nome_arquivo,caminho_storage,tipo_mime,tamanho_bytes')
+          .order('criado_em', { ascending: false }),
       ]);
       if (assetResult.error) throw assetResult.error;
-      if (profileResult.error) throw profileResult.error;
-      if (centerResult.error) throw centerResult.error;
       setAssets((assetResult.data ?? []) as Asset[]);
-      setProfiles(profileResult.data ?? []);
-      setCenters(centerResult.data ?? []);
+
+      const auxiliaryErrors: string[] = [];
+      if (profileResult.error) {
+        console.error('Falha ao carregar responsáveis do patrimônio:', profileResult.error);
+        auxiliaryErrors.push('responsáveis');
+        setProfiles([]);
+      } else {
+        setProfiles(profileResult.data ?? []);
+      }
+      if (centerResult.error) {
+        console.error('Falha ao carregar centros de custo do patrimônio:', centerResult.error);
+        auxiliaryErrors.push('centros de custo');
+        setCenters([]);
+      } else {
+        setCenters(centerResult.data ?? []);
+      }
+      if (documentResult.error) {
+        console.error('Falha ao carregar anexos do patrimônio:', documentResult.error);
+        auxiliaryErrors.push('anexos');
+        setDocuments([]);
+      } else {
+        setDocuments((documentResult.data ?? []) as AssetDocumentMetadata[]);
+      }
+
+      setError(auxiliaryErrors.length > 0
+        ? `Ativos carregados. Não foi possível carregar ${auxiliaryErrors.join(', ')}; algumas ações podem ficar indisponíveis.`
+        : '');
     } catch (caughtError) {
       console.error('Falha ao carregar patrimônio:', caughtError);
       setError('Não foi possível carregar os ativos.');
@@ -144,16 +182,122 @@ export default function PatrimonioPage() {
     try {
       const { supabase, profile } = await getCurrentProfile();
       if (!profile) { window.location.replace('/login'); return; }
-      const { data, error: deleteError } = await supabase.from('patrimonio_ativos')
-        .delete().eq('id', asset.id).select('id').maybeSingle();
-      if (deleteError) throw deleteError;
-      if (!data) throw new Error('The asset was not deleted.');
+      const relatedDocuments = documents.filter((document) => document.patrimonio_ativo_id === asset.id);
+      const deleteAsset = async () => {
+        const { data, error: deleteError } = await supabase.from('patrimonio_ativos')
+          .delete().eq('id', asset.id).select('id').maybeSingle();
+        return { error: deleteError, deleted: Boolean(data) };
+      };
+      if (relatedDocuments.length > 0) {
+        await deletePrivateDocumentBatch(
+          relatedDocuments,
+          (document) => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).download(document.caminho_storage),
+          (document) => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).remove([document.caminho_storage]),
+          deleteAsset,
+          (document, backup) => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).upload(
+            document.caminho_storage,
+            backup,
+            { contentType: document.tipo_mime, upsert: false },
+          ),
+        );
+      } else {
+        const result = await deleteAsset();
+        if (result.error) throw result.error;
+        if (!result.deleted) throw new Error('The asset was not deleted.');
+      }
       setMessage(`Ativo "${asset.nome_item}" excluído com sucesso.`);
       setError('');
+      if (documentsAssetId === asset.id) setDocumentsAssetId(null);
       await loadAssets();
     } catch (caughtError) {
       console.error('Falha ao excluir ativo:', caughtError);
       setError('Não foi possível excluir o ativo.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function uploadAssetDocument(asset: Asset, file: File): Promise<boolean> {
+    const details = validatePrivateDocument(file);
+    if (!await hasValidDocumentSignature(file, details.contentType)) {
+      throw new Error('O conteúdo do arquivo não corresponde ao tipo informado.');
+    }
+    if (!window.confirm(`Enviar "${details.fileName}" para o ativo "${asset.nome_item}"?`)) return false;
+    setSaving(true);
+    try {
+      const { supabase, profile } = await getCurrentProfile();
+      if (!profile) { window.location.replace('/login'); return false; }
+      const id = crypto.randomUUID();
+      const storagePath = createPrivateDocumentPath(
+        'patrimonio', asset.id, profile.id, id, details.fileName,
+      );
+      await uploadPrivateDocument(
+        () => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).upload(storagePath, file, {
+          contentType: details.contentType,
+          upsert: false,
+        }),
+        async () => await supabase.from('patrimonio_documentos').insert({
+          id,
+          patrimonio_ativo_id: asset.id,
+          nome_arquivo: details.fileName,
+          caminho_storage: storagePath,
+          tipo_mime: details.contentType,
+          tamanho_bytes: details.size,
+          criado_por: profile.id,
+        }),
+        () => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).remove([storagePath]),
+      );
+      setMessage(`Documento anexado ao ativo "${asset.nome_item}".`);
+      await loadAssets();
+      return true;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function downloadAssetDocument(document: AssetDocumentMetadata) {
+    setSaving(true);
+    try {
+      const { supabase, profile } = await getCurrentProfile();
+      if (!profile) { window.location.replace('/login'); return; }
+      const { data, error: downloadError } = await supabase.storage
+        .from(PRIVATE_DOCUMENT_BUCKET).download(document.caminho_storage);
+      if (downloadError) throw downloadError;
+      if (!data) throw new Error('O documento privado não foi retornado.');
+      const objectUrl = URL.createObjectURL(data);
+      const anchor = window.document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = document.nome_arquivo;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeAssetDocument(document: AssetDocumentMetadata) {
+    if (!window.confirm(`Excluir permanentemente "${document.nome_arquivo}"?`)) return;
+    setSaving(true);
+    try {
+      const { supabase, profile } = await getCurrentProfile();
+      if (!profile) { window.location.replace('/login'); return; }
+      await deletePrivateDocumentBatch(
+        [document],
+        (item) => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).download(item.caminho_storage),
+        (item) => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).remove([item.caminho_storage]),
+        async () => {
+          const { data, error: deleteError } = await supabase.from('patrimonio_documentos')
+            .delete().eq('id', document.id).select('id').maybeSingle();
+          return { error: deleteError, deleted: Boolean(data) };
+        },
+        (item, backup) => supabase.storage.from(PRIVATE_DOCUMENT_BUCKET).upload(
+          item.caminho_storage,
+          backup,
+          { contentType: item.tipo_mime, upsert: false },
+        ),
+      );
+      setMessage(`Documento "${document.nome_arquivo}" excluído.`);
+      await loadAssets();
     } finally {
       setSaving(false);
     }
@@ -195,7 +339,7 @@ export default function PatrimonioPage() {
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">{error}</p>}
       {lastScan && <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3"><p className="text-xs font-bold uppercase tracking-wide text-blue-700">Consulta por etiqueta</p><p className="mt-1 text-sm text-slate-800">{lastScan}</p>{scannedAsset && <button className="mt-2 font-semibold text-blue-700" onClick={() => openAssetForm(scannedAsset)} type="button">Abrir ativo encontrado</button>}</div>}
       {isScannerOpen && <QrScanner onClose={() => setIsScannerOpen(false)} onDetected={handleScan} />}
-      {isFormOpen && <form className="mt-5 grid gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+      {isFormOpen && <form className="mt-5 grid gap-3 rounded-lg border border-blue-100 bg-blue-50 p-4 sm:grid-cols-2" key={editingAsset?.id ?? 'new-asset'} onSubmit={handleSubmit}>
         <label className="text-xs font-semibold">Nome do item<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm" defaultValue={editingAsset?.nome_item ?? ''} maxLength={150} name="name" required /></label>
         <label className="text-xs font-semibold">Tipo<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm" defaultValue={editingAsset?.tipo ?? ''} maxLength={80} name="type" required /></label>
         <label className="text-xs font-semibold">Número de série<input className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm" defaultValue={editingAsset?.numero_serie ?? ''} maxLength={100} name="serial" required /></label>
@@ -213,9 +357,22 @@ export default function PatrimonioPage() {
           <td className="py-4">{statuses.find((item) => item.value === asset.status)?.label ?? asset.status}</td>
           <td className="py-4">{profiles.find((profile) => profile.id === asset.responsavel_perfil_id)?.nome ?? '—'}</td>
           <td className="py-4">{centers.find((center) => center.id === asset.centro_custo_id)?.nome ?? '—'}</td>
-          <td className="py-4"><button className="mr-3 font-semibold text-blue-700" disabled={saving} onClick={() => openAssetForm(asset)} type="button">Editar</button><button className="mr-3 font-semibold text-blue-700" onClick={() => setLabelAsset(asset)} type="button">Etiqueta</button><button className="font-semibold text-red-700" disabled={saving} onClick={() => void removeAsset(asset)} type="button">Excluir</button></td>
+          <td className="py-4"><button className="mr-3 font-semibold text-blue-700" disabled={saving} onClick={() => openAssetForm(asset)} type="button">Editar</button><button className="mr-3 font-semibold text-blue-700" onClick={() => setLabelAsset(asset)} type="button">Etiqueta</button><button className="mr-3 font-semibold text-blue-700" disabled={saving} onClick={() => setDocumentsAssetId((current) => current === asset.id ? null : asset.id)} type="button">Anexos</button><button className="font-semibold text-red-700" disabled={saving} onClick={() => void removeAsset(asset)} type="button">Excluir</button></td>
         </tr>)}</tbody>
       </table>{loading && <p className="py-8 text-center text-sm text-slate-500">Carregando ativos...</p>}{!loading && filteredAssets.length === 0 && <p className="py-8 text-center text-sm text-slate-500">Nenhum ativo encontrado.</p>}</div>
+      {documentsAssetId && (() => {
+        const asset = assets.find((item) => item.id === documentsAssetId);
+        if (!asset) return null;
+        return <PrivateDocumentPanel
+          documents={documents.filter((document) => document.patrimonio_ativo_id === asset.id)}
+          disabled={saving}
+          id={`asset-documents-${asset.id}`}
+          label={`Anexos privados: ${asset.nome_item}`}
+          onDelete={removeAssetDocument}
+          onDownload={downloadAssetDocument}
+          onUpload={(file) => uploadAssetDocument(asset, file)}
+        />;
+      })()}
     </section>
     {labelAsset && <AssetLabel asset={labelAsset} onClose={() => setLabelAsset(null)} />}
   </ErpShell>;

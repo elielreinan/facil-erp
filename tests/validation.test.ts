@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { isSafeText, isValidCnpj, isValidIsoDate, maskCnpj, maskPhone, normalizeSearch } from '../lib/validation';
+import {
+  isSafeText,
+  isStrongPassword,
+  isValidCnpj,
+  isValidIsoDate,
+  maskCnpj,
+  maskPhone,
+  normalizeSearch,
+} from '../lib/validation';
 
 describe('validation helpers', () => {
+  it('enforces the configured password length and character classes', () => {
+    expect(isStrongPassword('Strong-pass-123!')).toBe(true);
+    expect(isStrongPassword('shortA1!')).toBe(false);
+    expect(isStrongPassword('lowercase-only-123!')).toBe(false);
+    expect(isStrongPassword('UPPERCASE-ONLY-123!')).toBe(false);
+    expect(isStrongPassword('NoSymbolPassword123')).toBe(false);
+  });
+
   it('formats CNPJ and phone values', () => {
     expect(maskCnpj('11222333000181')).toBe('11.222.333/0001-81');
     expect(maskPhone('11987654321')).toBe('(11) 98765-4321');

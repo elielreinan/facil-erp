@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { sha256Hex, verifyM2MToken, type M2MClaims } from '../_shared/m2m.ts';
 
 const EXPECTED_ISSUER = 'gfacilerp:jqjvzypalurnhbkqlzpx';
@@ -14,6 +14,59 @@ type RequestPayload =
   | { action: 'reset'; managed_user_id: string; auth_user_id: string };
 
 type IdentityLink = { managed_user_id: string; auth_user_id: string; email: string };
+type Table<Row, Insert, Update = Partial<Insert>> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
+type Database = {
+  public: {
+    Tables: {
+      perfis: Table<
+        {
+          id: string;
+          nome: string;
+          email: string;
+          setor: string;
+          nivel: string;
+          ativo: boolean;
+        },
+        {
+          id: string;
+          nome: string;
+          email: string;
+          setor: string;
+          nivel: string;
+          ativo?: boolean;
+        }
+      >;
+      gfac_user_links: Table<
+        {
+          managed_user_id: string;
+          auth_user_id: string;
+          email: string;
+          criado_em: string;
+        },
+        {
+          managed_user_id: string;
+          auth_user_id: string;
+          email: string;
+          criado_em?: string;
+        }
+      >;
+      gfac_m2m_nonces: Table<
+        { jti: string; expires_at: string; criado_em: string },
+        { jti: string; expires_at: string; criado_em?: string }
+      >;
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+type ServiceClient = SupabaseClient<Database, 'public'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -121,7 +174,7 @@ function validateClaims(claims: M2MClaims, bodyHash: string): boolean {
 }
 
 async function getIdentityLink(
-  client: ReturnType<typeof createClient>,
+  client: ServiceClient,
   managedUserId: string,
 ): Promise<IdentityLink | null> {
   const { data, error } = await client
@@ -137,7 +190,7 @@ async function getIdentityLink(
 }
 
 async function inviteUser(
-  client: ReturnType<typeof createClient>,
+  client: ServiceClient,
   payload: Extract<RequestPayload, { action: 'invite' }>,
 ): Promise<{ auth_user_id: string }> {
   const existingLink = await getIdentityLink(client, payload.managed_user_id);
@@ -223,7 +276,7 @@ async function inviteUser(
 }
 
 async function requireIdentityLink(
-  client: ReturnType<typeof createClient>,
+  client: ServiceClient,
   managedUserId: string,
   authUserId: string,
 ): Promise<IdentityLink> {
@@ -233,7 +286,7 @@ async function requireIdentityLink(
 }
 
 async function applyOperation(
-  client: ReturnType<typeof createClient>,
+  client: ServiceClient,
   payload: RequestPayload,
 ): Promise<Record<string, unknown>> {
   if (payload.action === 'invite') return await inviteUser(client, payload);
@@ -288,7 +341,7 @@ async function applyOperation(
 
   const redirectTo = getPasswordRedirectUrl();
   const anonKey = getEnv('SUPABASE_ANON_KEY');
-  const authClient = createClient(getEnv('SUPABASE_URL'), anonKey, {
+  const authClient = createClient<Database>(getEnv('SUPABASE_URL'), anonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { error } = await authClient.auth.resetPasswordForEmail(link.email, {
@@ -337,7 +390,7 @@ Deno.serve(async (request: Request) => {
 
     const supabaseUrl = getEnv('SUPABASE_URL');
     const serviceRoleKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
-    const client = createClient(supabaseUrl, serviceRoleKey, {
+    const client = createClient<Database>(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const now = new Date();

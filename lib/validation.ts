@@ -44,6 +44,17 @@ export function isSafeText(value: string, maxLength: number): boolean {
     && !/[<>`]/.test(value);
 }
 
+const REQUIRED_PASSWORD_SYMBOLS = "!@#$%^&*()_+-=[]{};':\"\\|<>?,./`~";
+
+export function isStrongPassword(value: string): boolean {
+  return value.length >= 12
+    && value.length <= 128
+    && /[a-z]/.test(value)
+    && /[A-Z]/.test(value)
+    && /\d/.test(value)
+    && [...REQUIRED_PASSWORD_SYMBOLS].some((character) => value.includes(character));
+}
+
 export function normalizeSearch(value: string, maxLength = 100): string {
   return value.trim().slice(0, maxLength);
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import QRCode from 'qrcode';
 
 type LabelAsset = {
@@ -49,7 +50,7 @@ export function AssetLabel({ asset, onClose }: { asset: LabelAsset; onClose: () 
           <button className="rounded px-2 py-1 text-sm text-slate-500 hover:bg-slate-100" onClick={onClose} type="button">Fechar</button>
         </div>
         <div className="mt-5 rounded border border-dashed border-slate-300 p-4 text-center">
-          {qrDataUrl ? <img alt={`QR Code de ${asset.nome_item}`} className="mx-auto h-48 w-48" src={qrDataUrl} /> : <div className="flex h-48 items-center justify-center text-sm text-slate-500">Gerando QR Code...</div>}
+          {qrDataUrl ? <Image alt={`QR Code de ${asset.nome_item}`} className="mx-auto h-48 w-48" height={192} src={qrDataUrl} unoptimized width={192} /> : <div className="flex h-48 items-center justify-center text-sm text-slate-500">Gerando QR Code...</div>}
           <p className="font-bold">{asset.nome_item}</p>
           <p className="text-sm text-slate-600">{asset.tipo}</p>
           <p className="mt-1 text-xs text-slate-500">Série: {asset.numero_serie}</p>

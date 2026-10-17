@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createPrivateDocumentPath,
   deletePrivateDocumentBatch,
   extractAssetId,
   extractInvoiceAccessKey,
@@ -47,8 +48,21 @@ describe('private document and QR helpers', () => {
 
   it('resolves only UUID asset identifiers from labels', () => {
     expect(extractAssetId(assetId)).toBe(assetId);
+    expect(extractAssetId(`facilerp://patrimonio/${assetId}`)).toBe(assetId);
     expect(extractAssetId(`https://facilerp.test/asset?asset=${assetId}`)).toBe(assetId);
+    expect(extractAssetId(`facilerp://outro/${assetId}`)).toBeNull();
+    expect(extractAssetId(`facilerp://patrimonio/${assetId}?redirect=https://evil.test`)).toBeNull();
     expect(extractAssetId('https://facilerp.test/?asset=1')).toBeNull();
+  });
+
+  it('creates a private Storage path scoped to each asset and uploader', () => {
+    expect(createPrivateDocumentPath(
+      'patrimonio',
+      assetId,
+      '90000000-0000-4000-8000-000000000001',
+      'a0000000-0000-4000-8000-000000000001',
+      'manual de uso.pdf',
+    )).toBe('patrimonio/80000000-0000-4000-8000-000000000001/90000000-0000-4000-8000-000000000001/a0000000-0000-4000-8000-000000000001.pdf');
   });
 
   it('checks document extension, MIME, size and leading file signature', async () => {

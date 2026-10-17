@@ -6,7 +6,7 @@ import {
   validatePrivateDocument,
 } from '../lib/private-documents';
 
-export function PrivateDocumentPanel({
+export function PrivateDocumentPanel<TDocument extends PrivateDocumentMetadata>({
   documents,
   label,
   id,
@@ -15,13 +15,13 @@ export function PrivateDocumentPanel({
   onDownload,
   onDelete,
 }: {
-  documents: PrivateDocumentMetadata[];
+  documents: TDocument[];
   label: string;
   id?: string;
   disabled: boolean;
   onUpload: (file: File) => Promise<boolean>;
-  onDownload: (document: PrivateDocumentMetadata) => Promise<void>;
-  onDelete: (document: PrivateDocumentMetadata) => Promise<void>;
+  onDownload: (document: TDocument) => Promise<void>;
+  onDelete: (document: TDocument) => Promise<void>;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);

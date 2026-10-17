@@ -9,6 +9,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [recoveryMessage, setRecoveryMessage] = useState('');
+  const [isRecovery, setIsRecovery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -51,6 +53,25 @@ export default function LoginPage() {
     }
   }
 
+  async function handleRecovery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage('');
+    setRecoveryMessage('');
+    setIsSubmitting(true);
+    try {
+      const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      });
+      if (error) throw error;
+      setRecoveryMessage('Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.');
+    } catch (error) {
+      console.error('Falha ao solicitar redefinição de senha:', error);
+      setErrorMessage('Não foi possível solicitar a redefinição. Tente novamente mais tarde.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <section className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
@@ -58,13 +79,13 @@ export default function LoginPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-700">
             FACIL ERP
           </p>
-          <h1 className="mt-3 text-3xl font-bold text-slate-900">Acesse sua conta</h1>
+          <h1 className="mt-3 text-3xl font-bold text-slate-900">{isRecovery ? 'Redefina sua senha' : 'Acesse sua conta'}</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Entre com suas credenciais corporativas para continuar.
+            {isRecovery ? 'Informe seu e-mail corporativo para receber as instruções de redefinição.' : 'Entre com suas credenciais corporativas para continuar.'}
           </p>
         </div>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={(event) => void (isRecovery ? handleRecovery(event) : handleSubmit(event))}>
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="email">
               E-mail
@@ -82,7 +103,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div>
+          {!isRecovery && <div>
             <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="password">
               Senha
             </label>
@@ -97,8 +118,13 @@ export default function LoginPage() {
               type="password"
               value={password}
             />
-          </div>
+          </div>}
 
+          {recoveryMessage ? (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">
+              {recoveryMessage}
+            </p>
+          ) : null}
           {errorMessage ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
               {errorMessage}
@@ -110,12 +136,22 @@ export default function LoginPage() {
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting ? 'Entrando...' : 'Entrar'}
+            {isSubmitting ? 'Aguarde...' : isRecovery ? 'Enviar link de redefinição' : 'Entrar'}
           </button>
 
-          <p className="text-center text-sm text-slate-500">
-            Acesso restrito a usuários autorizados.
-          </p>
+          <button
+            className="w-full text-sm font-semibold text-blue-700 hover:text-blue-900"
+            disabled={isSubmitting}
+            onClick={() => {
+              setIsRecovery((current) => !current);
+              setErrorMessage('');
+              setRecoveryMessage('');
+            }}
+            type="button"
+          >
+            {isRecovery ? 'Voltar ao login' : 'Esqueci minha senha'}
+          </button>
+          {!isRecovery && <p className="text-center text-sm text-slate-500">Acesso restrito a usuários autorizados.</p>}
         </form>
       </section>
     </main>

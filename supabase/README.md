@@ -50,17 +50,46 @@ baseline, a atualizacao do banco existente e a auditoria automatica.
 transacao revertida, incluindo Suprimentos, Orcamentos, TI, Diretoria, NV3 e
 perfil inativo. Tambem exercita CUD operacional por setor, arquivamento,
 cascata de itens de orcamento e bloqueio da RPC de atribuicoes para setores
-sem necessidade funcional. Storage privado, anexos fiscais/orcamentarios e
-policies de leitura, upload e exclusao estao implementados; a matriz nao envia
-bytes reais nem testa restauracao apos falhas de rede. Validar upload/download
-e backup em staging. A matriz tambem testa o digito verificador fiscal e a
-atualizacao atomica do total previsto com arredondamento por item. Rode com a
-stack local iniciada:
+sem necessidade funcional. Storage privado e anexos de orcamentos, notas e
+patrimonio usam metadados vinculados, paths por ativo/registro/usuario,
+validacao de conteudo no cliente, limite de 10 MiB e policies por setor. A
+matriz verifica as policies de objetos e as operacoes de metadados, mas nao
+transfere bytes pela API nem demonstra restauracao de backup; esses dois
+checks continuam obrigatorios em staging. Tambem testa o digito verificador
+fiscal e o arredondamento atomico do total previsto por item. Rode com a stack
+local iniciada:
 
 ```powershell
 Get-Content -Raw -Path 'C:\caminho\FacilERP\supabase\tests\sector_rls.sql' |
   docker exec -i supabase_db_facil-erp psql -v ON_ERROR_STOP=1 -U postgres -d postgres
 ```
+
+## Backup e restauracao dos anexos
+
+O `storage:backup` exporta os objetos privados para um diretório absoluto fora
+do repositório e grava um manifesto com caminho, tamanho, MIME e SHA-256.
+`storage:restore` valida o manifesto, o caminho, os bytes e o hash antes de
+recriar objetos; nunca sobrescreve objetos existentes e tenta remover os
+objetos da tentativa se houver falha parcial.
+
+Configure `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente no ambiente
+local do operador. A chave privilegiada não deve ser colocada em argumentos,
+logs, arquivos versionados ou no frontend. Use uma pasta de backup com ACL
+restrita, fora do repositório, e teste a restauração em um projeto isolado:
+
+```powershell
+npm run storage:backup -- 'D:\Backups\FacilERP\storage-20261017'
+npm run storage:restore -- 'D:\Backups\FacilERP\storage-20261017'
+```
+
+A restauração é aditiva: colisão de caminho causa falha sem sobrescrita.
+Se a recuperação for para outro projeto, passe `--allow-cross-project`
+explicitamente após o caminho; o script recusa por padrão restaurar o backup
+em um projeto Supabase diferente.
+Preserve uma cópia imutável do backup e registre o resultado em um local seguro.
+A execução local do roteiro verifica bytes reais; o ciclo periódico de backup,
+retenção, acesso do operador e restauração do bucket de staging ainda precisa
+ser exercitado antes de considerar o plano de continuidade operacional aprovado.
 
 Nao aplicar a migration remota sem revisao do impacto, backup atualizado e
 autorizacao explicita.

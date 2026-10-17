@@ -146,7 +146,7 @@ export default function OrcamentosPage() {
       const matchesSearch = !normalizedSearch || `${budget.name} ${budget.center}`.toLowerCase().includes(normalizedSearch);
       return matchesSearch && (!statusFilter || budget.status === statusFilter);
     });
-  }, [search, statusFilter]);
+  }, [budgets, search, statusFilter]);
   const statusOptions = useMemo(() => Array.from(new Set(budgets.map((budget) => budget.status).filter(Boolean))), [budgets]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '../../lib/supabase';
+import { isStrongPassword } from '../../lib/validation';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -31,8 +32,8 @@ export default function ResetPasswordPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage('');
-    if (password.length < 12) {
-      setErrorMessage('A senha deve ter pelo menos 12 caracteres.');
+    if (!isStrongPassword(password)) {
+      setErrorMessage('Use de 12 a 128 caracteres, com minúscula, maiúscula, número e símbolo.');
       return;
     }
     if (password !== confirmation) {
@@ -75,6 +76,7 @@ export default function ResetPasswordPage() {
               <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="password">
                 Nova senha
               </label>
+              <p className="mb-2 text-xs text-slate-500">12–128 caracteres, incluindo minúscula, maiúscula, número e símbolo.</p>
               <input
                 autoComplete="new-password"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"

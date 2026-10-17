@@ -12,6 +12,10 @@ export type PrivateDocumentMetadata = {
   tamanho_bytes: number;
 };
 
+export type AssetDocumentMetadata = PrivateDocumentMetadata & {
+  patrimonio_ativo_id: string;
+};
+
 export type PrivateDocumentDetails = {
   fileName: string;
   contentType: (typeof PRIVATE_DOCUMENT_MIME_TYPES)[number];
@@ -72,7 +76,7 @@ export async function hasValidDocumentSignature(
 }
 
 export function createPrivateDocumentPath(
-  category: 'orcamentos' | 'notas-fiscais',
+  category: 'orcamentos' | 'notas-fiscais' | 'patrimonio',
   parentId: string,
   profileId: string,
   documentId: string,
@@ -143,12 +147,20 @@ export function matchesInvoiceAccessKeyDetails(
 
 export function extractAssetId(value: string): string | null {
   const candidate = value.trim();
-  const isUuid = (text: string) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text);
+  const isUuid = (text: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text);
   if (isUuid(candidate)) return candidate;
 
   try {
     const parsedUrl = new URL(candidate);
+    if (
+      parsedUrl.protocol === 'facilerp:'
+      && parsedUrl.hostname === 'patrimonio'
+      && !parsedUrl.search
+      && !parsedUrl.hash
+    ) {
+      const id = parsedUrl.pathname.slice(1);
+      return isUuid(id) ? id : null;
+    }
     const id = parsedUrl.searchParams.get('asset');
     return id && isUuid(id) ? id : null;
   } catch {

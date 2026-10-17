@@ -203,8 +203,23 @@ create table public.nota_fiscal_documentos (
   criado_em timestamptz not null default timezone('utc', now())
 );
 
+create table public.patrimonio_documentos (
+  id uuid primary key default gen_random_uuid(),
+  patrimonio_ativo_id uuid not null references public.patrimonio_ativos (id) on delete cascade,
+  nome_arquivo text not null check (length(trim(nome_arquivo)) > 0),
+  caminho_storage text not null unique check (
+    caminho_storage ~ '^patrimonio/[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}\.(pdf|xml)$'
+  ),
+  tipo_mime varchar(120) not null check (tipo_mime in ('application/pdf', 'application/xml', 'text/xml')),
+  tamanho_bytes bigint not null check (tamanho_bytes > 0 and tamanho_bytes <= 10485760),
+  criado_por uuid not null references public.perfis (id) on delete restrict,
+  criado_em timestamptz not null default timezone('utc', now())
+);
+
 create index nota_fiscal_documentos_nota_id_idx
   on public.nota_fiscal_documentos (nota_fiscal_id);
+create index patrimonio_documentos_ativo_id_idx
+  on public.patrimonio_documentos (patrimonio_ativo_id);
 
 create or replace function public.sync_orcamento_previsto_total()
 returns trigger
@@ -287,6 +302,7 @@ alter table public.fornecedores enable row level security;
 alter table public.relatorios_salvos enable row level security;
 alter table public.orcamento_documentos enable row level security;
 alter table public.nota_fiscal_documentos enable row level security;
+alter table public.patrimonio_documentos enable row level security;
 
 revoke all on all tables in schema public from anon;
 revoke references, trigger, truncate, maintain
@@ -311,7 +327,8 @@ grant select, insert, update, delete on
   public.auditoria_eventos,
   public.relatorios_salvos,
   public.orcamento_documentos,
-  public.nota_fiscal_documentos
+  public.nota_fiscal_documentos,
+  public.patrimonio_documentos
 to authenticated;
 
 create or replace function public.current_profile_sector()
@@ -487,6 +504,22 @@ create policy "Suprimentos gerenciam documentos fiscais"
   using (public.can_manage('suprimentos'))
   with check (public.can_manage('suprimentos') and criado_por = auth.uid());
 
+create policy "Setores autorizados podem ler documentos patrimoniais"
+  on public.patrimonio_documentos for select to authenticated
+  using (public.can_read_sector('ti'));
+
+create policy "TI gerencia documentos patrimoniais"
+  on public.patrimonio_documentos for all to authenticated
+  using (public.can_manage('ti'))
+  with check (
+    public.can_manage('ti')
+    and criado_por = auth.uid()
+    and exists (
+      select 1 from public.patrimonio_ativos as asset
+      where asset.id = patrimonio_ativo_id
+    )
+  );
+
 do $$
 declare
   relation_name text;
@@ -505,7 +538,8 @@ begin
     'auditoria_eventos',
     'relatorios_salvos',
     'orcamento_documentos',
-    'nota_fiscal_documentos'
+    'nota_fiscal_documentos',
+    'patrimonio_documentos'
   ]
   loop
     execute format(
@@ -665,6 +699,9 @@ for each row execute function public.audit_private_document_change();
 create trigger audit_nota_fiscal_documentos_change
 after insert or update or delete on public.nota_fiscal_documentos
 for each row execute function public.audit_private_document_change();
+create trigger audit_patrimonio_documentos_change
+after insert or update or delete on public.patrimonio_documentos
+for each row execute function public.audit_private_document_change();
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -698,6 +735,14 @@ create policy "Authorized sectors read linked private documents"
         and public.can_read_sector('suprimentos')
         and exists (
           select 1 from public.nota_fiscal_documentos as document
+          where document.caminho_storage = storage.objects.name
+        )
+      )
+      or (
+        (storage.foldername(name))[1] = 'patrimonio'
+        and public.can_read_sector('ti')
+        and exists (
+          select 1 from public.patrimonio_documentos as document
           where document.caminho_storage = storage.objects.name
         )
       )
@@ -744,6 +789,14 @@ create policy "Authorized sectors upload private documents"
           )
         )
       )
+      or (
+        (storage.foldername(name))[1] = 'patrimonio'
+        and public.can_manage('ti')
+        and exists (
+          select 1 from public.patrimonio_ativos as asset
+          where asset.id::text = (storage.foldername(name))[2]
+        )
+      )
     )
   );
 
@@ -770,6 +823,17 @@ create policy "Authorized sectors delete linked private documents"
           (storage.foldername(name))[3] = auth.uid()::text
           or exists (
             select 1 from public.nota_fiscal_documentos as document
+            where document.caminho_storage = storage.objects.name
+          )
+        )
+      )
+      or (
+        (storage.foldername(name))[1] = 'patrimonio'
+        and public.can_manage('ti')
+        and (
+          (storage.foldername(name))[3] = auth.uid()::text
+          or exists (
+            select 1 from public.patrimonio_documentos as document
             where document.caminho_storage = storage.objects.name
           )
         )

@@ -43,6 +43,8 @@ export function ErpShell({ children, eyebrow, title }: {
   const router = useRouter();
   const [highContrast, setHighContrast] = useState(false);
   const [compact, setCompact] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [sessionError, setSessionError] = useState('');
 
   useEffect(() => {
     const applyPreferences = () => {
@@ -52,7 +54,11 @@ export function ErpShell({ children, eyebrow, title }: {
     applyPreferences();
     window.addEventListener('facilerp:preferences-changed', applyPreferences);
     let active = true;
-    getSupabaseClient().auth.getUser().then(({ data, error }) => {
+    const supabase = getSupabaseClient();
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (active && event === 'SIGNED_OUT') window.location.replace('/login');
+    });
+    supabase.auth.getUser().then(({ data, error }) => {
       if (active && (error || !data.user)) router.replace('/login');
     }).catch((error: unknown) => {
       console.error('Falha ao validar sessão:', error);
@@ -60,9 +66,27 @@ export function ErpShell({ children, eyebrow, title }: {
     });
     return () => {
       active = false;
+      authListener.subscription.unsubscribe();
       window.removeEventListener('facilerp:preferences-changed', applyPreferences);
     };
   }, [router]);
+
+  async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSessionError('');
+    try {
+      const { error } = await getSupabaseClient().auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      router.replace('/login');
+      router.refresh();
+    } catch (caughtError) {
+      console.error('Falha ao encerrar a sessão:', caughtError);
+      setSessionError('Não foi possível encerrar a sessão. Tente novamente.');
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <main className={`min-h-screen bg-[#f5f7fb] text-slate-900 ${highContrast ? 'erp-high-contrast' : ''} ${compact ? 'erp-compact' : ''}`}>
@@ -106,8 +130,9 @@ export function ErpShell({ children, eyebrow, title }: {
         </nav>
         <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8">
           <div><p className="text-xs font-semibold uppercase tracking-widest text-blue-700">{eyebrow}</p><h1 className="mt-1 text-xl font-bold">{title}</h1></div>
-          <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">Ambiente corporativo</span><div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">AD</div></div>
+          <div className="flex items-center gap-3"><span className="hidden text-sm text-slate-500 sm:block">Ambiente corporativo</span><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50" disabled={signingOut} onClick={() => void signOut()} type="button">{signingOut ? 'Saindo...' : 'Sair'}</button><div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">AD</div></div>
         </header>
+        {sessionError && <p className="mx-5 mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 sm:mx-8" role="alert">{sessionError}</p>}
         <div className="p-5 sm:p-8">{children}</div>
       </div>
     </main>
