@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getAuthenticatedUser } from '../../lib/authenticated-user';
+import { checkOperationalAccess } from '../../lib/operational-access';
 import { getSupabaseClient } from '../../lib/supabase';
 
 export default function LoginPage() {
@@ -10,18 +12,45 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       return;
     }
 
-    const supabase = getSupabaseClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        router.replace('/dashboard');
+    let active = true;
+    void (async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const user = await getAuthenticatedUser(
+          () => supabase.auth.getSession(),
+          (accessToken) => supabase.auth.getUser(accessToken),
+        );
+        if (!user) return;
+        if (active) setHasSession(true);
+
+        const access = await checkOperationalAccess(
+          () => supabase.rpc('needs_password_rotation'),
+          () => supabase.rpc('is_profile_active'),
+        );
+        if (!active) return;
+        if (access === 'profile-inactive') {
+          setErrorMessage('Esta conta não tem um perfil operacional ativo. Peça ao administrador para verificar o cadastro e o status.');
+          return;
+        }
+        router.replace(access === 'password-rotation-required' ? '/redefinir-senha' : '/dashboard');
+      } catch (error: unknown) {
+        console.error('Falha ao validar a sessão existente:', error);
+        if (active) {
+          setErrorMessage('Não foi possível validar a sessão. Tente novamente.');
+        }
       }
-    });
+    })();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -41,13 +70,38 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace('/dashboard');
+      setHasSession(true);
+      const access = await checkOperationalAccess(
+        () => supabase.rpc('needs_password_rotation'),
+        () => supabase.rpc('is_profile_active'),
+      );
+      if (access === 'profile-inactive') {
+        setErrorMessage('A autenticação foi aceita, mas esta conta não tem um perfil operacional ativo. Peça ao administrador para verificar o cadastro e o status.');
+        return;
+      }
+      router.replace(access === 'password-rotation-required' ? '/redefinir-senha' : '/dashboard');
       router.refresh();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Falha ao realizar login:', error);
-      setErrorMessage('Não foi possível realizar o login. Tente novamente.');
+      setErrorMessage('Não foi possível validar o acesso. Tente novamente.');
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleSignOut() {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    setErrorMessage('');
+    try {
+      const { error } = await getSupabaseClient().auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      setHasSession(false);
+    } catch (error: unknown) {
+      console.error('Falha ao encerrar a sessão no login:', error);
+      setErrorMessage('Não foi possível encerrar a sessão. Tente novamente.');
+    } finally {
+      setIsSigningOut(false);
     }
   }
 
@@ -103,6 +157,17 @@ export default function LoginPage() {
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
               {errorMessage}
             </p>
+          ) : null}
+
+          {hasSession ? (
+            <button
+              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSigningOut}
+              onClick={() => void handleSignOut()}
+              type="button"
+            >
+              {isSigningOut ? 'Saindo...' : 'Sair desta conta'}
+            </button>
           ) : null}
 
           <button

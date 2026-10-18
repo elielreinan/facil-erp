@@ -4,32 +4,32 @@ O projeto Supabase deste aplicativo e independente do GFacilERP. A configuracao
 local da CLI esta em `config.toml`; as migrations versionadas registram o
 baseline, a atualizacao do banco existente e a auditoria automatica.
 
-## Estado remoto em 16/10/2026
+## Estado remoto em 17/10/2026
 
 - Projeto: `gjhnowasfdkifxriizje` (PostgreSQL 17.11).
-- Backup manual de roles, schema e dados confirmado fora do repositorio em
-  `Documents/Supabase-Backups/facil-erp-20261016-211336`.
-- Baseline reconciliado com o schema existente; aplicadas as migrations
-  `20261016221412_upgrade_existing_schema` e
-  `20261016221500_add_automatic_audit`.
-- Validado no banco: `orcamento_documentos`, `orcamentos.valor_previsto_total`,
-  policy de perfil proprio e 11 triggers de auditoria.
-- Historico `supabase_migrations.schema_migrations` consultado e alinhado com
-  as tres migrations locais.
-- Foi preparada localmente uma migration incremental e uma Edge Function
-  receptora para a integracao assinada com o GFacilERP. Essa migration e a
-  funcao ainda nao foram aplicadas/publicadas no projeto remoto.
+- Backup de roles, schema e dados da aplicacao criado fora do repositorio em
+  `Documents/Supabase-Backups/facil-erp-20261017-201116`. O dump SQL nao inclui
+  objetos binarios do Storage nem substitui um teste de restauracao.
+- As 12 migrations locais estao aplicadas no projeto remoto, incluindo
+  integracao M2M, regras por setor, Storage privado e rotacao obrigatoria de
+  senha temporaria. A migration `20261017215600_grant_service_role_profile_management.sql`
+  concede a Edge Function acesso de leitura/insercao/atualizacao de perfis; a
+  exclusao continua indisponivel diretamente pelo Data API.
 - A migration local `20261016230500_sync_budget_totals.sql` recalcula
   `orcamentos.valor_previsto_total` ao inserir, alterar, mover ou excluir
-  itens previstos. Foi aplicada e exercitada no PostgreSQL local; ainda nao
-  foi aplicada no projeto remoto.
+  itens previstos. Foi aplicada e exercitada no PostgreSQL local e remoto.
 - A migration local `20261016233000_sector_scoped_reads.sql` restringe
   consultas por setor e preserva a leitura ampla da Diretoria/NV3. Foi
-  aplicada e verificada localmente; ainda nao foi aplicada no projeto remoto.
+  aplicada e verificada localmente e remotamente.
 - A migration `20261016234800_complete_operational_crud.sql` habilita escrita
   de centros de custo para Suprimentos e fornece selecao restrita de perfis
-  ativos para atribuicoes de TI/Suprimentos. Foi validada localmente; nao foi
+  ativos para atribuicoes de TI/Suprimentos. Foi validada localmente e
   aplicada ao projeto remoto.
+- `gfac-account-management` esta ativa com validacao M2M assinada propria
+  (`verify_jwt=false`); `update-temporary-password` esta ativa com
+  `verify_jwt=true`.
+- O `service_role` pode consultar, inserir e atualizar `perfis` para o
+  provisionamento administrativo; nao recebe permissao de exclusao direta.
 
 ## Matriz de leitura RLS
 
@@ -45,6 +45,22 @@ baseline, a atualizacao do banco existente e a auditoria automatica.
 - Perfil inativo nao le tabelas operacionais. As escritas continuam seguindo
   as policies existentes por setor; Diretoria recebe leitura ampla, nao
   permissao de escrita nos setores.
+
+## Sessao e acesso operacional no cliente
+
+O cliente verifica primeiro `auth.getSession()`; sem sessao local, nao tenta
+validar um usuario nem chama as RPCs de acesso. Com sessao, valida o token com
+`auth.getUser(access_token)`, consulta `needs_password_rotation()` e depois
+`is_profile_active()`. A senha temporaria leva a tela de troca; conta sem perfil
+ativo recebe orientacao para procurar o administrador, em vez de alternar entre
+login e um modulo operacional. As policies RLS continuam sendo a autoridade
+final para leitura e escrita: as verificacoes do cliente nao as substituem.
+
+Depois de alterar o codigo-fonte, reinicie o servidor local. Um instalador
+Windows existente nao e atualizado automaticamente. O instalador FacilERP
+0.1.8 foi gerado com as alteracoes atuais; ainda precisa ser instalado e
+validado em um Windows limpo. A verificacao recente passou em TypeScript, lint,
+29 testes do FacilERP e build Tauri/Next.
 
 `supabase/tests/sector_rls.sql` valida a matriz com usuarios ficticios em
 transacao revertida, incluindo Suprimentos, Orcamentos, TI, Diretoria, NV3 e
@@ -91,8 +107,8 @@ A execução local do roteiro verifica bytes reais; o ciclo periódico de backup
 retenção, acesso do operador e restauração do bucket de staging ainda precisa
 ser exercitado antes de considerar o plano de continuidade operacional aprovado.
 
-Nao aplicar a migration remota sem revisao do impacto, backup atualizado e
-autorizacao explicita.
+Antes de qualquer nova migration remota, revisar o impacto e criar backup
+atualizado fora do repositorio.
 
 Nao use `db reset` em projetos remotos. Nao coloque senha do banco ou chaves
 secret/service_role em variaveis `NEXT_PUBLIC_*`, no frontend ou no Git.
@@ -116,28 +132,38 @@ audiencia, emissor, escopo, validade, hash do corpo e nonce antes de operar no
 Auth/perfil deste projeto. A service_role do FacilERP permanece apenas no
 ambiente Edge do proprio FacilERP.
 
-Preparacao local:
+Estado remoto:
 
 - `supabase/functions/gfac-account-management` recebe somente tokens M2M
   assinados; `verify_jwt = false` e intencional e a funcao aplica validacao
   criptografica propria.
 - `20261016222500_add_gfac_m2m_account_management.sql` adiciona bloqueio
   imediato por perfil ativo, links de identidade e protecao contra replay.
-- O fluxo de convite/redefinicao redireciona para `/redefinir-senha`; a URL
-  deve estar autorizada nas configuracoes de Auth do FacilERP.
+- O fluxo de troca de senha temporaria esta publicado e protegido por JWT.
 - A chave publica de verificacao deve ser configurada como
   `GFA_CROSS_PROJECT_PUBLIC_KEY_B64` somente no FacilERP. A chave privada
   correspondente deve ficar somente no segredo
   `GFA_CROSS_PROJECT_PRIVATE_KEY_B64` do GFacilERP. Nunca envie essas chaves
   pelo chat ou inclua-as no Git.
 
-Validacao local: migrations aplicadas em Postgres descartavel; foram
-confirmadas 13 policies restritivas de perfil ativo e testado que perfil
-inativo nao le dados operacionais. A Edge Function compilou no runtime local;
-assinatura M2M valida, corpo adulterado rejeitado e replay do mesmo token
-rejeitado. Convites, SMTP, redefinicao e mutacoes reais ainda dependem de
-staging e configuracao das secrets.
+As funcoes M2M estao publicadas. A verificacao remota confirmou a origem
+`http://tauri.localhost` e rejeitou chamadas sem autenticacao ao endpoint de
+troca de senha. A chave publica do FacilERP e a chave privada do GFacilERP
+permanecem somente no secret store dos respectivos projetos.
 
-Nao execute `db push` nem publique funcoes remotas ate revisar a migration,
-configurar o par de chaves em ambiente seguro e autorizar explicitamente o
-deploy.
+## Provisionamento com senha temporaria
+
+Foi publicado um fluxo administrativo sem e-mail para criar contas
+operacionais quando o SMTP nao esta disponivel. Ele cria a identidade Auth,
+perfil NV1 ativo e vinculo M2M; `must_change_password` bloqueia as policies
+operacionais ate a troca. A funcao `update-temporary-password` valida a sessao,
+confirma a senha temporaria atual, exige uma senha forte diferente e so entao
+libera o perfil. A senha nao e gravada em tabelas, auditoria, logs ou respostas.
+
+A migration `20261017193000_require_temporary_password_rotation.sql` e as
+Edge Functions estao aplicadas/publicadas. Nenhuma conta de teste foi criada
+remotamente nesta etapa. O fluxo marca o e-mail como confirmado sem verificacao
+por mensagem, portanto use-o somente para enderecos autorizados e previamente
+conferidos pelo operador. Compartilhe senhas temporarias por canal seguro.
+Convites e redefinicoes por email continuam indisponiveis sem SMTP configurado
+e testado.

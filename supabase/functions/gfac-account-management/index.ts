@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { sha256Hex, verifyM2MToken, type M2MClaims } from '../_shared/m2m.ts';
+import { isStrongPassword } from '../../../lib/validation.ts';
 
 const EXPECTED_ISSUER = 'gfacilerp:jqjvzypalurnhbkqlzpx';
 const EXPECTED_AUDIENCE = 'facil-erp-account-management';
@@ -8,6 +9,7 @@ const ALLOWED_SECTORS = new Set(['suprimentos', 'orcamentos', 'ti', 'diretoria']
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type RequestPayload =
+  | { action: 'create'; managed_user_id: string; nome: string; email: string; setor: string; password: string }
   | { action: 'invite'; managed_user_id: string; nome: string; email: string; setor: string }
   | { action: 'reset'; managed_user_id: string; auth_user_id: string; email: string }
   | { action: 'set_status'; managed_user_id: string; auth_user_id: string; status: 'aprovado' | 'bloqueado' }
@@ -31,6 +33,7 @@ type Database = {
           setor: string;
           nivel: string;
           ativo: boolean;
+          must_change_password: boolean;
         },
         {
           id: string;
@@ -39,6 +42,7 @@ type Database = {
           setor: string;
           nivel: string;
           ativo: boolean;
+          must_change_password?: boolean;
         }
       >;
       gfac_user_links: Table<
@@ -91,6 +95,29 @@ function getEnv(name: string): string {
 
 function parseRequest(value: unknown): RequestPayload | null {
   if (!isRecord(value) || !isUuid(value.managed_user_id) || typeof value.action !== 'string') return null;
+
+  if (value.action === 'create') {
+    if (
+      typeof value.nome !== 'string' ||
+      value.nome.trim().length < 2 ||
+      value.nome.trim().length > 150 ||
+      typeof value.email !== 'string' ||
+      value.email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email.trim()) ||
+      typeof value.setor !== 'string' ||
+      !ALLOWED_SECTORS.has(value.setor) ||
+      typeof value.password !== 'string' ||
+      !isStrongPassword(value.password)
+    ) return null;
+    return {
+      action: 'create',
+      managed_user_id: value.managed_user_id,
+      nome: value.nome.trim(),
+      email: value.email.trim().toLowerCase(),
+      setor: value.setor,
+      password: value.password,
+    };
+  }
 
   if (value.action === 'invite') {
     if (
@@ -193,6 +220,80 @@ async function applyOperation(
   client: ServiceClient,
   payload: RequestPayload,
 ): Promise<Record<string, unknown>> {
+  if (payload.action === 'create') {
+    const existingLink = await getIdentityLink(client, payload.managed_user_id);
+    if (existingLink) {
+      if (existingLink.email.toLowerCase() !== payload.email) {
+        throw new Error('Managed user email does not match the existing identity.');
+      }
+      const { data: existingProfile, error: existingProfileError } = await client
+        .from('perfis')
+        .select('email,ativo,must_change_password')
+        .eq('id', existingLink.auth_user_id)
+        .maybeSingle();
+      if (
+        existingProfileError ||
+        !existingProfile ||
+        existingProfile.email.toLowerCase() !== payload.email ||
+        !existingProfile.ativo ||
+        !existingProfile.must_change_password
+      ) {
+        console.error('Existing temporary-password identity is not in a retryable state.', {
+          code: existingProfileError?.code,
+        });
+        throw new Error('Existing managed identity requires reconciliation.');
+      }
+      return { auth_user_id: existingLink.auth_user_id };
+    }
+
+    const { data: creationData, error: creationError } = await client.auth.admin.createUser({
+      email: payload.email,
+      password: payload.password,
+      email_confirm: true,
+      user_metadata: { nome: payload.nome, setor: payload.setor },
+    });
+    if (creationError || !creationData.user) {
+      console.error('Failed to create the FacilERP Auth account.', { code: creationError?.name });
+      throw new Error('Auth account creation failed.');
+    }
+
+    const authUserId = creationData.user.id;
+    try {
+      const { error: profileError } = await client.from('perfis').insert({
+        id: authUserId,
+        nome: payload.nome,
+        email: payload.email,
+        setor: payload.setor,
+        nivel: 'NV1',
+        ativo: true,
+        must_change_password: true,
+      });
+      if (profileError) {
+        console.error('Failed to create the temporary-password profile.', { code: profileError.code });
+        throw new Error('Profile creation failed.');
+      }
+      const { error: linkError } = await client.from('gfac_user_links').insert({
+        managed_user_id: payload.managed_user_id,
+        auth_user_id: authUserId,
+        email: payload.email,
+      });
+      if (linkError) {
+        console.error('Failed to link the temporary-password identity.', { code: linkError.code });
+        throw new Error('Identity link creation failed.');
+      }
+    } catch (error) {
+      const { error: rollbackError } = await client.auth.admin.deleteUser(authUserId);
+      if (rollbackError) {
+        console.error('Failed to roll back temporary-password account creation.', {
+          code: rollbackError.name,
+        });
+        throw new Error('Account-creation reconciliation is required.');
+      }
+      throw error;
+    }
+    return { auth_user_id: authUserId };
+  }
+
   if (payload.action === 'invite') {
     const existingLink = await getIdentityLink(client, payload.managed_user_id);
     if (existingLink) {

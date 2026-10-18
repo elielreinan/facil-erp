@@ -7,16 +7,18 @@ values
   ('00000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'rls-ti@example.test', '', now()),
   ('00000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'rls-director@example.test', '', now()),
   ('00000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'rls-inactive@example.test', '', now()),
-  ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'rls-nv3@example.test', '', now());
+  ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'rls-nv3@example.test', '', now()),
+  ('00000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'rls-temp-password@example.test', '', now());
 
-insert into public.perfis (id, nome, email, setor, nivel, ativo)
+insert into public.perfis (id, nome, email, setor, nivel, ativo, must_change_password)
 values
-  ('00000000-0000-4000-8000-000000000001', 'RLS Supply', 'rls-supply@example.test', 'suprimentos', 'NV1', true),
-  ('00000000-0000-4000-8000-000000000002', 'RLS Budget', 'rls-budget@example.test', 'orcamentos', 'NV1', true),
-  ('00000000-0000-4000-8000-000000000003', 'RLS TI', 'rls-ti@example.test', 'ti', 'NV1', true),
-  ('00000000-0000-4000-8000-000000000004', 'RLS Director', 'rls-director@example.test', 'diretoria', 'NV1', true),
-  ('00000000-0000-4000-8000-000000000005', 'RLS Inactive', 'rls-inactive@example.test', 'suprimentos', 'NV1', false),
-  ('00000000-0000-4000-8000-000000000006', 'RLS NV3', 'rls-nv3@example.test', 'ti', 'NV3', true);
+  ('00000000-0000-4000-8000-000000000001', 'RLS Supply', 'rls-supply@example.test', 'suprimentos', 'NV1', true, false),
+  ('00000000-0000-4000-8000-000000000002', 'RLS Budget', 'rls-budget@example.test', 'orcamentos', 'NV1', true, false),
+  ('00000000-0000-4000-8000-000000000003', 'RLS TI', 'rls-ti@example.test', 'ti', 'NV1', true, false),
+  ('00000000-0000-4000-8000-000000000004', 'RLS Director', 'rls-director@example.test', 'diretoria', 'NV1', true, false),
+  ('00000000-0000-4000-8000-000000000005', 'RLS Inactive', 'rls-inactive@example.test', 'suprimentos', 'NV1', false, false),
+  ('00000000-0000-4000-8000-000000000006', 'RLS NV3', 'rls-nv3@example.test', 'ti', 'NV3', true, false),
+  ('00000000-0000-4000-8000-000000000007', 'RLS Temporary Password', 'rls-temp-password@example.test', 'diretoria', 'NV1', true, true);
 
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
@@ -577,6 +579,28 @@ begin
     or (select count(*) from public.perfis) <> 0
     or (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 0 then
     raise exception 'inactive profile retained data access';
+  end if;
+end;
+$$;
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-000000000007","role":"authenticated"}', true);
+do $$
+begin
+  if not public.needs_password_rotation() or public.is_profile_active() then
+    raise exception 'temporary-password profile rotation state regression';
+  end if;
+  if not has_table_privilege('service_role', 'public.perfis', 'SELECT')
+    or not has_table_privilege('service_role', 'public.perfis', 'INSERT')
+    or not has_table_privilege('service_role', 'public.perfis', 'UPDATE') then
+    raise exception 'account-management service role has incorrect profile privileges';
+  end if;
+  if (select count(*) from public.perfis) <> 0
+    or (select count(*) from public.compras_historico) <> 0
+    or (select count(*) from storage.objects where bucket_id = 'erp-private-documents') <> 0 then
+    raise exception 'temporary-password profile retained operational data access';
   end if;
 end;
 $$;

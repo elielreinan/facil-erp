@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { getAuthenticatedUser } from '../lib/authenticated-user';
 import { getSupabaseClient } from '../lib/supabase';
+import { checkOperationalAccess } from '../lib/operational-access';
 
 const modules = [
   ['boxes', 'Suprimentos', '/suprimentos'],
@@ -45,6 +47,7 @@ export function ErpShell({ children, eyebrow, title }: {
   const [compact, setCompact] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [sessionError, setSessionError] = useState('');
+  const [accessState, setAccessState] = useState<'checking' | 'ready' | 'blocked'>('checking');
 
   useEffect(() => {
     const applyPreferences = () => {
@@ -54,22 +57,56 @@ export function ErpShell({ children, eyebrow, title }: {
     applyPreferences();
     window.addEventListener('facilerp:preferences-changed', applyPreferences);
     let active = true;
+    let redirectingToLogin = false;
+    const redirectToLogin = () => {
+      if (!active || redirectingToLogin || pathname === '/login') return;
+      redirectingToLogin = true;
+      router.replace('/login');
+    };
     const supabase = getSupabaseClient();
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (active && event === 'SIGNED_OUT') window.location.replace('/login');
+      if (event === 'SIGNED_OUT') redirectToLogin();
     });
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (active && (error || !data.user)) router.replace('/login');
-    }).catch((error: unknown) => {
-      console.error('Falha ao validar sessão:', error);
-      if (active) router.replace('/login');
-    });
+    void (async () => {
+      try {
+        const user = await getAuthenticatedUser(
+          () => supabase.auth.getSession(),
+          (accessToken) => supabase.auth.getUser(accessToken),
+        );
+        if (!user) {
+          redirectToLogin();
+          return;
+        }
+        const access = await checkOperationalAccess(
+          () => supabase.rpc('needs_password_rotation'),
+          () => supabase.rpc('is_profile_active'),
+        );
+        if (!active) return;
+        if (access === 'password-rotation-required') {
+          setAccessState('blocked');
+          router.replace('/redefinir-senha');
+          return;
+        }
+        if (access === 'profile-inactive') {
+          setSessionError('Sua conta está autenticada, mas não tem um perfil operacional ativo. Peça ao administrador para verificar o cadastro e o status da conta.');
+          setAccessState('blocked');
+          return;
+        }
+        setAccessState('ready');
+      } catch (error: unknown) {
+        console.error('Falha ao validar acesso operacional:', error);
+        if (active) {
+          setSessionError('Não foi possível validar a sessão e a exigência de troca de senha. Tente recarregar a página.');
+          setAccessState('blocked');
+        }
+      }
+    })();
     return () => {
       active = false;
       authListener.subscription.unsubscribe();
       window.removeEventListener('facilerp:preferences-changed', applyPreferences);
     };
-  }, [router]);
+  }, [pathname, router]);
 
   async function signOut() {
     if (signingOut) return;
@@ -78,14 +115,45 @@ export function ErpShell({ children, eyebrow, title }: {
     try {
       const { error } = await getSupabaseClient().auth.signOut({ scope: 'local' });
       if (error) throw error;
-      router.replace('/login');
-      router.refresh();
     } catch (caughtError) {
       console.error('Falha ao encerrar a sessão:', caughtError);
       setSessionError('Não foi possível encerrar a sessão. Tente novamente.');
     } finally {
       setSigningOut(false);
     }
+  }
+
+  if (accessState !== 'ready') {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+        <section className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+          {sessionError ? (
+            <>
+              <p className="text-sm text-red-700" role="alert">{sessionError}</p>
+              <button
+                className="mt-4 rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white"
+                onClick={() => window.location.reload()}
+                type="button"
+              >
+                Tentar novamente
+              </button>
+              <button
+                className="ml-2 mt-4 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 disabled:opacity-60"
+                disabled={signingOut}
+                onClick={() => void signOut()}
+                type="button"
+              >
+                {signingOut ? 'Saindo...' : 'Sair'}
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-slate-600" role="status">
+              {accessState === 'checking' ? 'Validando seu acesso...' : 'Redirecionando para a troca obrigatória de senha...'}
+            </p>
+          )}
+        </section>
+      </main>
+    );
   }
 
   return (

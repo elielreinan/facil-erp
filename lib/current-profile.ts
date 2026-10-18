@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabase';
+import { getAuthenticatedUser } from './authenticated-user';
 
 type Profile = {
   id: string;
@@ -36,7 +37,10 @@ export function getCurrentProfile() {
   const supabase = getSupabaseClient();
   return readCurrentProfile(
     supabase,
-    () => supabase.auth.getUser(),
+    () => getAuthenticatedUser(
+      () => supabase.auth.getSession(),
+      (accessToken) => supabase.auth.getUser(accessToken),
+    ).then((user) => ({ data: { user }, error: null })),
     (userId) => supabase
       .from('perfis')
       .select('id,nome,email,setor,nivel')

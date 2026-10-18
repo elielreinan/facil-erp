@@ -8,21 +8,42 @@ import { isStrongPassword } from '../../lib/validation';
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState<boolean | null>(null);
+  const [temporaryPasswordRequired, setTemporaryPasswordRequired] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [accessError, setAccessError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
-    const supabase = getSupabaseClient();
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (!active) return;
-      setSessionReady(!error && Boolean(data.user));
-    }).catch((error: unknown) => {
-      console.error('Falha ao validar o link de redefinição:', error);
-      if (active) setSessionReady(false);
-    });
+    void (async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (!data.user) {
+          if (active) setSessionReady(false);
+          return;
+        }
+        const { data: rotationRequired, error: rotationError } =
+          await supabase.rpc('needs_password_rotation');
+        if (rotationError) throw rotationError;
+        if (typeof rotationRequired !== 'boolean') {
+          throw new Error('Estado de troca de senha inválido.');
+        }
+        if (!active) return;
+        setTemporaryPasswordRequired(rotationRequired);
+        setSessionReady(true);
+      } catch (error: unknown) {
+        console.error('Falha ao validar o acesso à redefinição de senha:', error);
+        if (active) {
+          setAccessError('Não foi possível validar sua sessão. Tente novamente mais tarde.');
+          setSessionReady(false);
+        }
+      }
+    })();
 
     return () => {
       active = false;
@@ -40,15 +61,29 @@ export default function ResetPasswordPage() {
       setErrorMessage('As senhas informadas não coincidem.');
       return;
     }
+    if (temporaryPasswordRequired && (!currentPassword || currentPassword === password)) {
+      setErrorMessage('Informe a senha temporária atual e escolha uma senha diferente.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const { error } = await getSupabaseClient().auth.updateUser({ password });
+      const supabase = getSupabaseClient();
+      const { error } = temporaryPasswordRequired
+        ? await supabase.functions.invoke('update-temporary-password', {
+          body: { current_password: currentPassword, password },
+        })
+        : await supabase.auth.updateUser({ password });
       if (error) {
         console.error('Falha ao atualizar a senha:', error);
-        setErrorMessage('Não foi possível atualizar a senha. Solicite um novo link.');
+        setErrorMessage(temporaryPasswordRequired
+          ? 'Não foi possível trocar a senha temporária. Confira a senha atual e tente novamente.'
+          : 'Não foi possível atualizar a senha. Solicite um novo link.');
         return;
       }
+      setCurrentPassword('');
+      setPassword('');
+      setConfirmation('');
       router.replace('/dashboard');
       router.refresh();
     } catch (error) {
@@ -65,13 +100,32 @@ export default function ResetPasswordPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-700">
           FACIL ERP
         </p>
-        <h1 className="mt-3 text-3xl font-bold text-slate-900">Defina sua senha</h1>
+        <h1 className="mt-3 text-3xl font-bold text-slate-900">
+          {temporaryPasswordRequired ? 'Troque sua senha temporária' : 'Defina sua senha'}
+        </h1>
         {sessionReady === null ? (
           <p className="mt-4 text-sm text-slate-600" role="status">
             Validando o link de convite ou recuperação...
           </p>
         ) : sessionReady ? (
           <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+            {temporaryPasswordRequired && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="current-password">
+                  Senha temporária atual
+                </label>
+                <input
+                  autoComplete="current-password"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  id="current-password"
+                  maxLength={128}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  required
+                  type="password"
+                  value={currentPassword}
+                />
+              </div>
+            )}
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="password">
                 Nova senha
@@ -121,7 +175,7 @@ export default function ResetPasswordPage() {
         ) : null}
         {sessionReady === false && (
           <p className="mt-4 text-sm text-slate-600">
-            O link é inválido ou expirou. Solicite um novo ao administrador.
+            {accessError || 'O link é inválido ou expirou. Solicite um novo ao administrador.'}
           </p>
         )}
       </section>

@@ -7,6 +7,9 @@ project_id = "facil-erp"
 [functions.gfac-account-management]
 verify_jwt = false
 
+[functions.update-temporary-password]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.
