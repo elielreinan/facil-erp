@@ -57,10 +57,34 @@ login e um modulo operacional. As policies RLS continuam sendo a autoridade
 final para leitura e escrita: as verificacoes do cliente nao as substituem.
 
 Depois de alterar o codigo-fonte, reinicie o servidor local. Um instalador
-Windows existente nao e atualizado automaticamente. O instalador FacilERP
-0.1.8 foi gerado com as alteracoes atuais; ainda precisa ser instalado e
-validado em um Windows limpo. A verificacao recente passou em TypeScript, lint,
-29 testes do FacilERP e build Tauri/Next.
+Windows existente nao e atualizado automaticamente. O FacilERP 0.1.11 inclui
+suporte a CSV UTF-8/UTF-16 separado por virgula, ponto e virgula ou tabulacao,
+e evita abrir uma janela de console no executavel de producao. Instale a nova
+versao para receber as correcoes; o pacote ainda precisa ser validado em
+Windows limpo. TypeScript, lint, testes e build desktop passaram.
+
+## Revisao opcional por agente na conferencia
+
+O codigo local inclui um proxy Supabase Edge Function (`quote-agent`) para
+OpenAI/ChatGPT ou Anthropic/Claude. O browser so o chama depois de uma acao e
+consentimento expresso; chaves de provedor nunca entram no frontend. O backend
+valida JWT, consulta orcamento/itens com o token do usuario para preservar RLS,
+limita payload/tempo/resposta e usa quota de ate cinco chamadas por usuario/dia.
+O modelo recebe nomes, unidades, quantidades, precos e comparacao; nao recebe o
+arquivo original, nome do projeto, identidade do usuario ou historico de compra.
+O modelo nao pode executar operacoes no banco.
+
+Este conector ainda nao foi publicado/configurado e nao funciona nos instaladores
+0.1.11/0.1.6. Para habilita-lo, o responsavel precisa aprovar o envio de dados a
+terceiros e custos potenciais, aplicar
+`20261021230000_add_quote_agent_quota.sql` em staging, configurar somente os
+secrets do provedor aprovado (`OPENAI_API_KEY`/`OPENAI_QUOTE_MODEL` ou
+`ANTHROPIC_API_KEY`/`ANTHROPIC_QUOTE_MODEL`) no painel seguro, estabelecer limite
+global de gasto no provedor, publicar a funcao com JWT habilitado e testar antes
+de qualquer deploy de producao. Nao configure secrets via frontend, arquivo
+versionado, terminal ou chat. A quota diaria nao substitui o teto de gastos do
+provedor. Gere novo instalador somente depois de aprovados deploy, consentimento
+e testes.
 
 `supabase/tests/sector_rls.sql` valida a matriz com usuarios ficticios em
 transacao revertida, incluindo Suprimentos, Orcamentos, TI, Diretoria, NV3 e

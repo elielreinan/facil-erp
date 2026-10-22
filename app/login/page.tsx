@@ -4,16 +4,30 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthenticatedUser } from '../../lib/authenticated-user';
 import { checkOperationalAccess } from '../../lib/operational-access';
+import {
+  readRememberSessionPreference,
+  saveRememberSessionPreference,
+} from '../../lib/auth-session-preference';
 import { getSupabaseClient } from '../../lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberSession, setRememberSession] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  useEffect(() => {
+    try {
+      setRememberSession(readRememberSessionPreference(window.localStorage));
+    } catch (error: unknown) {
+      console.error('Falha ao ler a preferência de sessão:', error);
+      setErrorMessage('Não foi possível carregar a preferência de sessão neste navegador.');
+    }
+  }, []);
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -59,6 +73,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      saveRememberSessionPreference(rememberSession, window.localStorage);
       const supabase = getSupabaseClient();
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -152,6 +167,19 @@ export default function LoginPage() {
               value={password}
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              checked={rememberSession}
+              className="h-4 w-4 accent-blue-700"
+              onChange={(event) => setRememberSession(event.target.checked)}
+              type="checkbox"
+            />
+            Lembrar de mim neste dispositivo
+          </label>
+          <p className="-mt-4 text-xs text-slate-500">
+            Desmarque em computadores compartilhados; sem a opção, a sessão termina ao fechar o navegador ou app.
+          </p>
 
           {errorMessage ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">

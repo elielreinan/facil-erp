@@ -10,6 +10,9 @@ verify_jwt = false
 [functions.update-temporary-password]
 verify_jwt = true
 
+[functions.quote-agent]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.
